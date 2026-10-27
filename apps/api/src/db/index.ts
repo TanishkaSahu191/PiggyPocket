@@ -1,4 +1,6 @@
 import pg, { type QueryResultRow } from 'pg';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
@@ -18,11 +20,21 @@ let customClient: DbClient | null = null;
 let pgliteInstance: PGlite | null = null;
 let isInitialized = false;
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PGDATA_DIR = path.resolve(__dirname, '../../.pgdata');
+// Avoid paths containing spaces (e.g. 'ALL MY PROJECTS') which cause WASM initdb failure
+const PGDATA_DIR = path.join(os.tmpdir(), 'smart_budget_pgdata');
 
 async function initPglite(): Promise<DbClient> {
   if (!pgliteInstance) {
+    // Auto-cleanup stale lock files from previous unclean shutdowns
+    try {
+      const pidFile = path.join(PGDATA_DIR, 'postmaster.pid');
+      const lockFile = path.join(PGDATA_DIR, '.s.PGSQL.5432.lock.out');
+      if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
+      if (fs.existsSync(lockFile)) fs.unlinkSync(lockFile);
+    } catch {
+      // Ignore if cannot delete
+    }
+
     pgliteInstance = new PGlite(PGDATA_DIR);
     await runMigrations({
       query: (sql, params) => pgliteInstance!.query(sql, params),
