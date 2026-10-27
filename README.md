@@ -1,4 +1,4 @@
-# PiggyPocket 🐷💰 - Smart Budget Tracker
+# PiggyPocket  - Smart Budget Tracker
 
 > A personal-finance web application (designed to be wrapped for Android via Capacitor) for students in India managing monthly pocket money in Indian Rupees (₹).
 

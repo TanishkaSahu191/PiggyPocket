@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.js';
 import { apiRequest } from '../api/client.js';
 import { Button, Card, EmptyState, Skeleton } from '../components/ui/index.js';
+import { NewMonthModal } from '../components/NewMonthModal.js';
 
 interface PeriodData {
   budgetPeriod: {
@@ -31,25 +32,37 @@ export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<PeriodData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNewMonthModal, setShowNewMonthModal] = useState(false);
+  const [newMonthTarget, setNewMonthTarget] = useState('');
+  const [newMonthPrefill, setNewMonthPrefill] = useState<any>(null);
+
+  const loadPeriod = async () => {
+    try {
+      // 1. Check if the current month has an active period
+      const checkRes = await apiRequest<{
+        hasPeriod: boolean;
+        monthKey: string;
+        prefill?: any;
+      }>('/api/budget/check-month');
+
+      if (!checkRes.hasPeriod) {
+        setNewMonthTarget(checkRes.monthKey);
+        setNewMonthPrefill(checkRes.prefill);
+        setShowNewMonthModal(true);
+      }
+
+      // 2. Load current period data
+      const res = await apiRequest<PeriodData>('/api/onboarding/period');
+      setData(res);
+    } catch (err) {
+      console.error('Failed to load period data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadPeriod() {
-      try {
-        const res = await apiRequest<PeriodData>('/api/onboarding/period');
-        if (isMounted) {
-          setData(res);
-        }
-      } catch (err) {
-        console.error('Failed to load period data:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
     loadPeriod();
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleLogout = async () => {
@@ -272,15 +285,31 @@ export const HomePage: React.FC = () => {
           </Card>
         ) : null}
 
-        {/* Action Bar for Phase 5 */}
+        {/* Action Grid for Monthly Report, Daily Summaries, Settings, Alerts */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate('/monthly-report')}
+            style={{ fontSize: '0.85rem', padding: '0.75rem 0.5rem', fontWeight: 700 }}
+          >
+            📊 Monthly Report
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/settings')}
+            style={{ fontSize: '0.85rem', padding: '0.75rem 0.5rem' }}
+          >
+            ⚙️ App Settings
+          </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => navigate('/daily-summary')}
             style={{ fontSize: '0.82rem', padding: '0.65rem 0.5rem' }}
           >
-            📊 Daily Summaries
+            📝 Daily History
           </Button>
           <Button
             variant="outline"
@@ -329,6 +358,20 @@ export const HomePage: React.FC = () => {
           PiggyPocket · Safe, realistic student budgeting
         </footer>
       </div>
+
+      {/* New Month Clean Setup Modal */}
+      {showNewMonthModal && newMonthTarget && (
+        <NewMonthModal
+          isOpen={showNewMonthModal}
+          monthKey={newMonthTarget}
+          prefill={newMonthPrefill}
+          onClose={() => setShowNewMonthModal(false)}
+          onSuccess={() => {
+            setShowNewMonthModal(false);
+            loadPeriod();
+          }}
+        />
+      )}
     </div>
   );
 };

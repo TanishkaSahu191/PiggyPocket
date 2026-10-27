@@ -10,6 +10,8 @@ import { OnboardingPage } from './pages/Onboarding.js';
 import { HomePage } from './pages/Home.js';
 import { NotificationPreferencesPage } from './pages/NotificationPreferences.js';
 import { DailySummaryPage } from './pages/DailySummary.js';
+import { MonthlyReportPage } from './pages/MonthlyReport.js';
+import { SettingsPage } from './pages/Settings.js';
 import { ProtectedRoute } from './auth/AuthGuard.js';
 
 export const App: React.FC = () => {
@@ -63,6 +65,22 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <DailySummaryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/monthly-report"
+                element={
+                  <ProtectedRoute>
+                    <MonthlyReportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
                   </ProtectedRoute>
                 }
               />

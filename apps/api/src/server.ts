@@ -6,6 +6,10 @@ import { errorHandler } from './utils/errors.js';
 import { authRoutes } from './routes/auth.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { reportRoutes } from './routes/reports.js';
+import { settingsRoutes } from './routes/settings.js';
+import { budgetRoutes } from './routes/budget.js';
+import { transactionRoutes } from './routes/transactions.js';
 
 export function buildServer() {
   const app = Fastify({
@@ -75,7 +79,11 @@ export function buildServer() {
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(onboardingRoutes, { prefix: '/api/onboarding' });
   app.register(onboardingRoutes, { prefix: '/api/budget' });
+  app.register(budgetRoutes, { prefix: '/api/budget' });
   app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(reportRoutes, { prefix: '/api/reports' });
+  app.register(settingsRoutes, { prefix: '/api/settings' });
+  app.register(transactionRoutes, { prefix: '/api/transactions' });
 
   return app;
 }

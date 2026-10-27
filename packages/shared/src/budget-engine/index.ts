@@ -4,7 +4,10 @@ import {
   DayBreakdownRow,
   DailySummaryOutput,
   CategoryTotal,
-  GoalStatus
+  GoalStatus,
+  MonthlyReportData,
+  CategoryComparison,
+  CategoryComparisonItem
 } from '../types/index.js';
 
 export function getLocalDateString(
@@ -487,4 +490,235 @@ export function computeCategoryTotals(
   }
 
   return result.sort((a, b) => b.totalPaise - a.totalPaise);
+}
+
+/**
+ * Computes reservoir usage statistics from daily breakdown.
+ */
+export function computeReservoirUsage(breakdown: DayBreakdownRow[]) {
+  let totalBankedPaise = 0;
+  let totalDrawnPaise = 0;
+  let daysReservoirUsed = 0;
+  let daysOverLimit = 0;
+  let highestSpendDay = { date: '', spentPaise: 0 };
+
+  for (const row of breakdown) {
+    if (!row.isPeriodDay) continue;
+    totalBankedPaise += row.bankedPaise;
+    totalDrawnPaise += row.reservoirUsedPaise;
+    if (row.reservoirUsedPaise > 0) {
+      daysReservoirUsed++;
+    }
+    if (row.spentPaise > row.limitPaise) {
+      daysOverLimit++;
+    }
+    if (row.spentPaise > highestSpendDay.spentPaise) {
+      highestSpendDay = { date: row.date, spentPaise: row.spentPaise };
+    }
+  }
+
+  const lastPeriodRow = breakdown[breakdown.length - 1];
+  const balanceLeftAtMonthEnd = lastPeriodRow ? lastPeriodRow.reservoirBalancePaise : 0;
+
+  return {
+    totalBankedPaise,
+    totalDrawnPaise,
+    balanceLeftAtMonthEnd,
+    daysReservoirUsed,
+    daysOverLimit,
+    highestSpendDay
+  };
+}
+
+/**
+ * Generates a short plain-language spending-habits summary generated from real numbers only.
+ */
+export function generateSpendingHabitsSummary(params: {
+  categories: CategoryTotal[];
+  highestSpendDay: { date: string; spentPaise: number };
+  daysOverLimit: number;
+  totalSpentPaise: number;
+}): string {
+  const { categories, highestSpendDay, daysOverLimit, totalSpentPaise } = params;
+
+  if (totalSpentPaise === 0 || categories.length === 0) {
+    return 'No spending recorded this month. You preserved 100% of your pocket money!';
+  }
+
+  const topCategory = categories[0];
+  const topCatStr = topCategory
+    ? `Top category was ${topCategory.category} (₹${(topCategory.totalPaise / 100).toLocaleString('en-IN')}, ${topCategory.percentageOfTotal}% of total spend).`
+    : '';
+
+  const highestSpendStr = highestSpendDay.spentPaise > 0
+    ? `Highest-spend day was ${highestSpendDay.date} with ₹${(highestSpendDay.spentPaise / 100).toLocaleString('en-IN')} spent.`
+    : '';
+
+  const overLimitStr = daysOverLimit === 0
+    ? 'You stayed within your daily spending limit on every active day.'
+    : `You exceeded your daily limit on ${daysOverLimit} ${daysOverLimit === 1 ? 'day' : 'days'}.`;
+
+  return [topCatStr, highestSpendStr, overLimitStr].filter(Boolean).join(' ');
+}
+
+/**
+ * Computes month-over-month category and total comparison.
+ */
+export function computeMonthComparison(
+  currentCategories: CategoryTotal[],
+  previousCategories: CategoryTotal[],
+  previousMonthKey: string
+): CategoryComparison {
+  const categoryMap = new Map<string, { current: number; previous: number }>();
+
+  let totalCurrent = 0;
+  for (const c of currentCategories) {
+    categoryMap.set(c.category, { current: c.totalPaise, previous: 0 });
+    totalCurrent += c.totalPaise;
+  }
+
+  let totalPrevious = 0;
+  for (const p of previousCategories) {
+    const existing = categoryMap.get(p.category) || { current: 0, previous: 0 };
+    existing.previous = p.totalPaise;
+    categoryMap.set(p.category, existing);
+    totalPrevious += p.totalPaise;
+  }
+
+  const items: CategoryComparisonItem[] = [];
+  for (const [category, val] of categoryMap.entries()) {
+    const diff = val.current - val.previous;
+    const percentageChange =
+      val.previous > 0
+        ? Math.round(((val.current - val.previous) / val.previous) * 10000) / 100
+        : null;
+    items.push({
+      category,
+      currentMonthPaise: val.current,
+      previousMonthPaise: val.previous,
+      diffPaise: diff,
+      percentageChange
+    });
+  }
+
+  items.sort((a, b) => Math.abs(b.diffPaise) - Math.abs(a.diffPaise));
+
+  const totalDiff = totalCurrent - totalPrevious;
+  const totalPercentageChange =
+    totalPrevious > 0
+      ? Math.round(((totalCurrent - totalPrevious) / totalPrevious) * 10000) / 100
+      : null;
+
+  return {
+    previousMonthKey,
+    categories: items,
+    totalCurrentMonthPaise: totalCurrent,
+    totalPreviousMonthPaise: totalPrevious,
+    totalDiffPaise: totalDiff,
+    totalPercentageChange
+  };
+}
+
+/**
+ * Computes comprehensive Monthly Report data live from budget input and transactions.
+ */
+export function computeFullMonthlyReport(params: {
+  input: MonthBudgetInput;
+  asOfDate?: string;
+  isFinished?: boolean;
+  previousMonthInput?: MonthBudgetInput | null;
+  previousMonthKey?: string;
+}): MonthlyReportData {
+  const { input, asOfDate, isFinished: explicitFinished, previousMonthInput, previousMonthKey } = params;
+  const timezone = input.timezone || 'Asia/Kolkata';
+  const { year, month } = parseYearMonth(input.receivedOn);
+  const totalDays = getDaysInMonth(year, month);
+  const lastDayOfMonth = formatDayString(year, month, totalDays);
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+  const effectiveAsOfDate = asOfDate || getLocalDateString(new Date(), timezone);
+  const isFinished = explicitFinished !== undefined ? explicitFinished : effectiveAsOfDate > lastDayOfMonth;
+
+  const monthSummary = computeMonthSummary(input, isFinished ? lastDayOfMonth : effectiveAsOfDate);
+  const breakdown = computeDailyBreakdown(input, isFinished ? lastDayOfMonth : effectiveAsOfDate);
+  const reservoirUsage = computeReservoirUsage(breakdown);
+  const categoryBreakdown = computeCategoryTotals(input.transactions, {
+    timezone,
+    targetYearMonth: monthKey
+  });
+
+  // Goal status determination per Phase 6 spec:
+  // Finished: ACHIEVED / PARTIAL / MISSED
+  // Current: ON_TRACK / REDUCED / AT_RISK
+  let status: GoalStatus;
+  if (isFinished) {
+    if (monthSummary.cumulativeShortfallPaise === 0) {
+      status = 'ACHIEVED';
+    } else if (monthSummary.projectedSavingsPaise > 0) {
+      status = 'PARTIAL';
+    } else {
+      status = 'MISSED';
+    }
+  } else {
+    if (monthSummary.cumulativeShortfallPaise === 0) {
+      status = 'ON_TRACK';
+    } else if (monthSummary.projectedSavingsPaise > 0) {
+      status = 'REDUCED';
+    } else {
+      status = 'AT_RISK';
+    }
+  }
+
+  const spendingHabitsSummary = generateSpendingHabitsSummary({
+    categories: categoryBreakdown,
+    highestSpendDay: reservoirUsage.highestSpendDay,
+    daysOverLimit: reservoirUsage.daysOverLimit,
+    totalSpentPaise: monthSummary.totalSpentPaise
+  });
+
+  let comparison: CategoryComparison | null = null;
+  if (previousMonthInput && previousMonthKey) {
+    const prevCategories = computeCategoryTotals(previousMonthInput.transactions, {
+      timezone,
+      targetYearMonth: previousMonthKey
+    });
+    comparison = computeMonthComparison(categoryBreakdown, prevCategories, previousMonthKey);
+  }
+
+  const activeTransactions = (input.transactions || []).filter(
+    (tx) => !tx.deletedAt && getLocalDateString(tx.occurredAt, timezone).startsWith(monthKey)
+  );
+
+  return {
+    monthKey,
+    isFinished,
+    pocketMoneyPaise: monthSummary.pocketMoneyPaise,
+    originalSavingsGoalPaise: monthSummary.originalSavingsGoalPaise,
+    initialSpendingBudgetPaise: monthSummary.spendingBudgetPaise,
+    totalSpentPaise: monthSummary.totalSpentPaise,
+    transactionCount: activeTransactions.length,
+    remainingMonthlyBudgetPaise: monthSummary.remainingMonthlyBudgetPaise,
+    reservoirUsage: {
+      totalBankedPaise: reservoirUsage.totalBankedPaise,
+      totalDrawnPaise: reservoirUsage.totalDrawnPaise,
+      balanceLeftAtMonthEnd: reservoirUsage.balanceLeftAtMonthEnd,
+      daysReservoirUsed: reservoirUsage.daysReservoirUsed,
+      daysOverLimit: reservoirUsage.daysOverLimit
+    },
+    cumulativeShortfallPaise: monthSummary.cumulativeShortfallPaise,
+    projectedSavingsPaise: monthSummary.projectedSavingsPaise,
+    budgetVsActual: {
+      budgetPaise: monthSummary.spendingBudgetPaise,
+      actualPaise: monthSummary.totalSpentPaise,
+      variancePaise: monthSummary.spendingBudgetPaise - monthSummary.totalSpentPaise,
+      percentageSpent:
+        monthSummary.spendingBudgetPaise > 0
+          ? Math.round((monthSummary.totalSpentPaise / monthSummary.spendingBudgetPaise) * 10000) / 100
+          : 0
+    },
+    goalStatus: status,
+    spendingHabitsSummary,
+    categoryBreakdown,
+    comparison
+  };
 }

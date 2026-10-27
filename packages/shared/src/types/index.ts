@@ -1,4 +1,4 @@
-export type GoalStatusCurrent = 'ON_TRACK' | 'REDUCED' | 'AT_RISK_OR_LOST';
+export type GoalStatusCurrent = 'ON_TRACK' | 'REDUCED' | 'AT_RISK_OR_LOST' | 'AT_RISK';
 export type GoalStatusFinished = 'ACHIEVED' | 'PARTIAL' | 'MISSED';
 export type GoalStatus = GoalStatusCurrent | GoalStatusFinished;
 
@@ -13,6 +13,7 @@ export interface TransactionInput {
   occurredAt: string | Date; // ISO string or Date
   category?: string;
   description?: string;
+  note?: string;
   deletedAt?: string | Date | null;
 }
 
@@ -83,3 +84,51 @@ export interface CategoryTotal {
   count: number;
   percentageOfTotal: number;
 }
+
+export interface CategoryComparisonItem {
+  category: string;
+  currentMonthPaise: number;
+  previousMonthPaise: number;
+  diffPaise: number;
+  percentageChange: number | null;
+}
+
+export interface CategoryComparison {
+  previousMonthKey: string;
+  categories: CategoryComparisonItem[];
+  totalCurrentMonthPaise: number;
+  totalPreviousMonthPaise: number;
+  totalDiffPaise: number;
+  totalPercentageChange: number | null;
+}
+
+export interface MonthlyReportData {
+  monthKey: string;
+  isFinished: boolean;
+  pocketMoneyPaise: number;
+  originalSavingsGoalPaise: number;
+  initialSpendingBudgetPaise: number;
+  totalSpentPaise: number;
+  transactionCount: number;
+  remainingMonthlyBudgetPaise: number;
+  reservoirUsage: {
+    totalBankedPaise: number;
+    totalDrawnPaise: number;
+    balanceLeftAtMonthEnd: number;
+    daysReservoirUsed: number;
+    daysOverLimit: number;
+  };
+  cumulativeShortfallPaise: number;
+  projectedSavingsPaise: number;
+  budgetVsActual: {
+    budgetPaise: number;
+    actualPaise: number;
+    variancePaise: number;
+    percentageSpent: number;
+  };
+  goalStatus: GoalStatus;
+  spendingHabitsSummary: string;
+  categoryBreakdown: CategoryTotal[];
+  comparison?: CategoryComparison | null;
+}
+
