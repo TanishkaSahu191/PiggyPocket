@@ -1,11 +1,13 @@
 import { buildServer } from './server.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
+import { initDatabase } from './db/index.js';
 
 async function start() {
-  const server = buildServer();
-
   try {
+    await initDatabase();
+    const server = buildServer();
+
     const address = await server.listen({
       port: env.PORT,
       host: env.HOST
@@ -19,3 +21,4 @@ async function start() {
 }
 
 start();
+

@@ -22,3 +22,7 @@ Thumbs.db
 .idea/
 *.suo
 *.user
+
+# Local Database
+.pgdata/
+apps/api/.pgdata/
