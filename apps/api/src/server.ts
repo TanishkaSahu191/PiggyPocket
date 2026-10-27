@@ -40,10 +40,15 @@ export function buildServer() {
     })
   });
 
-  // CORS limited to configured web origin
+  // CORS limited to configured web origin (with dev localhost flexibility)
   app.register(cors, {
     origin: (origin, cb) => {
-      if (!origin || origin === env.WEB_URL) {
+      if (
+        !origin ||
+        origin === env.WEB_URL ||
+        (env.NODE_ENV === 'development' &&
+          (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')))
+      ) {
         cb(null, true);
         return;
       }
@@ -53,15 +58,17 @@ export function buildServer() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
   });
 
-  // /health endpoint
-  app.get('/health', async (_req, reply) => {
+  // /health and /api/health endpoints
+  const healthHandler = async (_req: any, reply: any) => {
     return reply.status(200).send({
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: env.NODE_ENV
     });
-  });
+  };
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 
   // Authentication & Onboarding Routes
   app.register(authRoutes, { prefix: '/api/auth' });
