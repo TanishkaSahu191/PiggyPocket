@@ -2,6 +2,7 @@
 node_modules/
 dist/
 build/
+coverage/
 .next/
 .cache/
 npm-debug.log*

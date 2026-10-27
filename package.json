@@ -1,0 +1,31 @@
+{
+  "name": "smart-budget-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Smart Budget Tracker - Personal finance web app for students managing monthly pocket money in INR",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev --workspace=@smart-budget-tracker/web\" \"npm run dev --workspace=@smart-budget-tracker/api\"",
+    "dev:web": "npm run dev --workspace=@smart-budget-tracker/web",
+    "dev:api": "npm run dev --workspace=@smart-budget-tracker/api",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "migrate": "npm run migrate --workspace=@smart-budget-tracker/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.13.4",
+    "@vitest/coverage-v8": "^3.0.5",
+    "concurrently": "^9.1.2",
+    "eslint": "^10.13.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.0.5"
+  }
+}

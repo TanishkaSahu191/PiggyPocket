@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smart_budget_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-budget_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-budget_password}
+      POSTGRES_DB: ${DB_NAME:-smart_budget_dev}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-budget_user} -d ${DB_NAME:-smart_budget_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
