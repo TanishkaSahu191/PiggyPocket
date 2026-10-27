@@ -172,11 +172,12 @@ export function computeDailyBreakdown(
   const { year, month } = parseYearMonth(receivedOn);
   const allDays = getAllDaysInMonth(year, month);
   const autoDailyLimits = computeAutoDailyLimits(spendingBudgetPaise, receivedOn, timezone);
+  const customLimitsList = input.effectiveDailyLimits || (input as any).dailyLimits;
   const dailyLimits = resolveLimitsForMonth(
     allDays,
     receivedOn,
     autoDailyLimits,
-    input.effectiveDailyLimits
+    customLimitsList
   );
 
   // Group active (non-deleted) transactions belonging to this calendar month by local date

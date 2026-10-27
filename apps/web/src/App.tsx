@@ -8,6 +8,8 @@ import { RegisterPage } from './pages/Register.js';
 import { VerifyOtpPage } from './pages/VerifyOtp.js';
 import { OnboardingPage } from './pages/Onboarding.js';
 import { HomePage } from './pages/Home.js';
+import { NotificationPreferencesPage } from './pages/NotificationPreferences.js';
+import { DailySummaryPage } from './pages/DailySummary.js';
 import { ProtectedRoute } from './auth/AuthGuard.js';
 
 export const App: React.FC = () => {
@@ -45,6 +47,22 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notification-preferences"
+                element={
+                  <ProtectedRoute>
+                    <NotificationPreferencesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/daily-summary"
+                element={
+                  <ProtectedRoute>
+                    <DailySummaryPage />
                   </ProtectedRoute>
                 }
               />

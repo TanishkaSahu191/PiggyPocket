@@ -10,7 +10,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "migrate": "tsx src/db/migrate.ts"
+    "migrate": "tsx src/db/migrate.ts",
+    "scheduler": "tsx src/scheduler/worker.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

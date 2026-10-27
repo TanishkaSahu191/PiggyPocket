@@ -246,22 +246,51 @@ export const HomePage: React.FC = () => {
                 color: 'var(--color-text-muted)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                justifyContent: 'space-between',
                 borderTop: '1px solid rgba(255, 255, 255, 0.05)',
                 paddingTop: '0.75rem'
               }}
             >
-              <span>📧</span>
-              <span>
-                Daily summary scheduled at{' '}
-                <strong style={{ color: 'var(--color-text-secondary)' }}>
-                  {data?.notificationPrefs?.send_time_local || '22:00'}
-                </strong>{' '}
-                ({user?.timezone || 'Asia/Kolkata'})
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>📧</span>
+                <span>
+                  Daily summary:{' '}
+                  <strong style={{ color: 'var(--color-text-secondary)' }}>
+                    {data?.notificationPrefs?.send_time_local || '22:00'}
+                  </strong>
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/notification-preferences')}
+                style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+              >
+                Settings →
+              </Button>
             </div>
           </Card>
         ) : null}
+
+        {/* Action Bar for Phase 5 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/daily-summary')}
+            style={{ fontSize: '0.82rem', padding: '0.65rem 0.5rem' }}
+          >
+            📊 Daily Summaries
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/notification-preferences')}
+            style={{ fontSize: '0.82rem', padding: '0.65rem 0.5rem' }}
+          >
+            🔔 Alert Settings
+          </Button>
+        </div>
 
         {/* Temporary Empty Dashboard Area (Phase 4 will build the full tracker) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

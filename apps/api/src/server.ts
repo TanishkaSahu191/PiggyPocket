@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './utils/errors.js';
 import { authRoutes } from './routes/auth.js';
 import { onboardingRoutes } from './routes/onboarding.js';
+import { notificationRoutes } from './routes/notifications.js';
 
 export function buildServer() {
   const app = Fastify({
@@ -74,6 +75,7 @@ export function buildServer() {
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(onboardingRoutes, { prefix: '/api/onboarding' });
   app.register(onboardingRoutes, { prefix: '/api/budget' });
+  app.register(notificationRoutes, { prefix: '/api/notifications' });
 
   return app;
 }
