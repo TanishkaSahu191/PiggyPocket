@@ -114,104 +114,204 @@ export function computeAutoDailyLimits(
   return limits;
 }
 
-export function computeDailyBreakdown(input: MonthBudgetInput): DayBreakdownRow[] {
-  validateBudgetInput(input);
-
-  const timezone = input.timezone || 'Asia/Kolkata';
-  const { pocketMoneyPaise, originalSavingsGoalPaise, receivedOn } = input;
-  const spendingBudgetPaise = pocketMoneyPaise - originalSavingsGoalPaise;
-
-  const { year, month } = parseYearMonth(receivedOn);
-  const allDays = getAllDaysInMonth(year, month);
-  const autoDailyLimits = computeAutoDailyLimits(spendingBudgetPaise, receivedOn, timezone);
-
-  // Group active (non-deleted) transactions belonging to this calendar month by local date
-  const spentByDay = new Map<string, number>();
-  for (const tx of input.transactions || []) {
-    if (tx.deletedAt) continue;
-    if (typeof tx.amountPaise !== 'number' || !Number.isInteger(tx.amountPaise) || tx.amountPaise < 0) {
-      throw new Error(`Invalid transaction amountPaise: ${tx.amountPaise}`);
-    }
-    const localDate = getLocalDateString(tx.occurredAt, timezone);
-    // Only accumulate for the days in this month
-    const existing = spentByDay.get(localDate) || 0;
-    spentByDay.set(localDate, existing + tx.amountPaise);
-  }
-
-  // Pre-sort effective custom limits
-  const sortedCustomLimits = [...(input.effectiveDailyLimits || [])].sort((a, b) =>
+/**
+ * Resolves the applicable limit for each day in the calendar month.
+ */
+function resolveLimitsForMonth(
+  allDays: string[],
+  receivedOn: string,
+  autoDailyLimits: Map<string, number>,
+  customLimits: MonthBudgetInput['effectiveDailyLimits']
+): Map<string, number> {
+  const sortedCustom = [...(customLimits || [])].sort((a, b) =>
     a.effectiveFrom.localeCompare(b.effectiveFrom)
   );
 
-  const resolveLimitForDay = (dateStr: string): number => {
-    if (dateStr < receivedOn) return 0;
+  const limits = new Map<string, number>();
 
-    // Find the latest custom limit whose effectiveFrom <= dateStr
-    let applicableLimit: number | null = null;
-    for (const item of sortedCustomLimits) {
+  for (const dateStr of allDays) {
+    if (dateStr < receivedOn) {
+      limits.set(dateStr, 0);
+      continue;
+    }
+
+    let customLimit: number | null = null;
+    for (const item of sortedCustom) {
       if (item.effectiveFrom <= dateStr) {
-        applicableLimit = item.limitPaise;
+        customLimit = item.limitPaise;
       } else {
         break;
       }
     }
 
-    if (applicableLimit !== null) {
-      return applicableLimit;
+    if (customLimit !== null) {
+      limits.set(dateStr, customLimit);
+    } else {
+      limits.set(dateStr, autoDailyLimits.get(dateStr) || 0);
     }
+  }
 
-    return autoDailyLimits.get(dateStr) || 0;
-  };
+  return limits;
+}
 
+/**
+ * Computes daily breakdown for the month, implementing the Reservoir algorithm
+ * in chronological date order from receivedOn.
+ */
+export function computeDailyBreakdown(
+  input: MonthBudgetInput,
+  asOfDateInput?: string
+): DayBreakdownRow[] {
+  validateBudgetInput(input);
+
+  const timezone = input.timezone || 'Asia/Kolkata';
+  const { pocketMoneyPaise, originalSavingsGoalPaise, receivedOn } = input;
+  const spendingBudgetPaise = pocketMoneyPaise - originalSavingsGoalPaise;
+  const ruleVersion = String(input.rule_version || 'v2');
+
+  const { year, month } = parseYearMonth(receivedOn);
+  const allDays = getAllDaysInMonth(year, month);
+  const autoDailyLimits = computeAutoDailyLimits(spendingBudgetPaise, receivedOn, timezone);
+  const dailyLimits = resolveLimitsForMonth(
+    allDays,
+    receivedOn,
+    autoDailyLimits,
+    input.effectiveDailyLimits
+  );
+
+  // Group active (non-deleted) transactions belonging to this calendar month by local date
+  const spentByDay = new Map<string, number>();
+  for (const tx of input.transactions || []) {
+    if (tx.deletedAt) continue;
+    if (
+      typeof tx.amountPaise !== 'number' ||
+      !Number.isInteger(tx.amountPaise) ||
+      tx.amountPaise < 0
+    ) {
+      throw new Error(`Invalid transaction amountPaise: ${tx.amountPaise}`);
+    }
+    const localDate = getLocalDateString(tx.occurredAt, timezone);
+    const existing = spentByDay.get(localDate) || 0;
+    spentByDay.set(localDate, existing + tx.amountPaise);
+  }
+
+  const asOfDate = asOfDateInput || getLocalDateString(new Date(), timezone);
   const rows: DayBreakdownRow[] = [];
-  let runningCumulativeOverspend = 0;
+
+  let runningReservoir = 0;
+  let runningCumulativeShortfall = 0;
 
   for (const dateStr of allDays) {
     const isPeriodDay = dateStr >= receivedOn;
-    const limitPaise = resolveLimitForDay(dateStr);
+    const limitPaise = dailyLimits.get(dateStr) || 0;
     const spentPaise = spentByDay.get(dateStr) || 0;
 
-    let overspendPaise = 0;
-    let remainingPaise = 0;
+    let dailyOverspendPaise = 0;
+    let bankedPaise = 0;
+    let reservoirUsedPaise = 0;
+    let shortfallPaise = 0;
 
     if (isPeriodDay) {
-      overspendPaise = Math.max(0, spentPaise - limitPaise);
-      remainingPaise = Math.max(0, limitPaise - spentPaise);
-      runningCumulativeOverspend += overspendPaise;
+      if (ruleVersion === 'v1') {
+        // Legacy v1 rule: No reservoir buffer, raw daily overspends directly accumulate
+        dailyOverspendPaise = Math.max(0, spentPaise - limitPaise);
+        shortfallPaise = dailyOverspendPaise;
+        runningCumulativeShortfall += shortfallPaise;
+      } else {
+        // v2 Reservoir algorithm (Default)
+        if (spentPaise <= limitPaise) {
+          bankedPaise = limitPaise - spentPaise;
+          runningReservoir += bankedPaise;
+          reservoirUsedPaise = 0;
+          shortfallPaise = 0;
+          dailyOverspendPaise = 0;
+        } else {
+          // Spent exceeds limit
+          const excess = spentPaise - limitPaise;
+          dailyOverspendPaise = excess;
+          const covered = Math.min(excess, runningReservoir);
+          runningReservoir -= covered;
+          reservoirUsedPaise = covered;
+          bankedPaise = 0;
+          shortfallPaise = excess - covered;
+          runningCumulativeShortfall += shortfallPaise;
+        }
+      }
     }
 
-    const adjustedProjectedSavingsPaise =
-      originalSavingsGoalPaise - runningCumulativeOverspend;
+    const projectedSavingsPaise =
+      originalSavingsGoalPaise - runningCumulativeShortfall;
+    const isTodayProvisionally = dateStr === asOfDate;
+
+    // Remaining allowance for this specific day
+    const remainingPaise = isPeriodDay ? Math.max(0, limitPaise - spentPaise) : 0;
 
     rows.push({
       date: dateStr,
       isPeriodDay,
       limitPaise,
       spentPaise,
+      dailyOverspendPaise,
+      bankedPaise,
+      reservoirUsedPaise,
+      reservoirBalancePaise: runningReservoir,
+      shortfallPaise,
+      cumulativeShortfallPaise: runningCumulativeShortfall,
+      projectedSavingsPaise,
+      isTodayProvisionally,
+      // Backwards-compatibility aliases
       remainingPaise,
-      overspendPaise,
-      cumulativeOverspendPaise: runningCumulativeOverspend,
-      adjustedProjectedSavingsPaise
+      overspendPaise: dailyOverspendPaise,
+      cumulativeOverspendPaise: runningCumulativeShortfall,
+      adjustedProjectedSavingsPaise: projectedSavingsPaise
     });
   }
 
   return rows;
 }
 
+/**
+ * Computes summary metrics for a specific single day.
+ */
 export function computeDailySummary(
   input: MonthBudgetInput,
   targetDate: string
 ): DailySummaryOutput {
-  const breakdown = computeDailyBreakdown(input);
-  const row = breakdown.find((r) => r.date === targetDate);
-  if (!row) {
+  const breakdown = computeDailyBreakdown(input, targetDate);
+  const targetIndex = breakdown.findIndex((r) => r.date === targetDate);
+  if (targetIndex === -1) {
     throw new Error(
       `Date ${targetDate} is outside the calendar month of receivedOn (${input.receivedOn})`
     );
   }
-  return { ...row };
+
+  const row = breakdown[targetIndex];
+
+  // Start of day reservoir = reservoir from previous period day (or 0 if first period day)
+  let startOfDayReservoirPaise = 0;
+  if (targetIndex > 0) {
+    const prevRow = breakdown[targetIndex - 1];
+    if (prevRow.isPeriodDay) {
+      startOfDayReservoirPaise = prevRow.reservoirBalancePaise;
+    }
+  }
+
+  // availableToSpendToday = today's remaining allowance + reservoir from earlier days
+  const todayRemainingAllowance = Math.max(0, row.limitPaise - row.spentPaise);
+  const availableToSpendTodayPaise = row.isPeriodDay
+    ? todayRemainingAllowance + startOfDayReservoirPaise
+    : 0;
+
+  return {
+    ...row,
+    startOfDayReservoirPaise,
+    availableToSpendTodayPaise
+  };
 }
 
+/**
+ * Computes full monthly budget summary as of a given date.
+ */
 export function computeMonthSummary(
   input: MonthBudgetInput,
   asOfDateInput?: string
@@ -220,6 +320,7 @@ export function computeMonthSummary(
   const timezone = input.timezone || 'Asia/Kolkata';
   const { pocketMoneyPaise, originalSavingsGoalPaise, receivedOn } = input;
   const spendingBudgetPaise = pocketMoneyPaise - originalSavingsGoalPaise;
+  const ruleVersion = String(input.rule_version || 'v2');
 
   const { year, month, day: startDay } = parseYearMonth(receivedOn);
   const totalDaysInMonth = getDaysInMonth(year, month);
@@ -227,25 +328,57 @@ export function computeMonthSummary(
   const lastDayOfMonth = formatDayString(year, month, totalDaysInMonth);
 
   const asOfDate = asOfDateInput || getLocalDateString(new Date(), timezone);
-  const breakdown = computeDailyBreakdown(input);
+  const breakdown = computeDailyBreakdown(input, asOfDate);
 
-  // Cumulative overspend up to asOfDate
-  let cumulativeOverspendPaise = 0;
-  for (const row of breakdown) {
+  // Reservoir balance and cumulative shortfall as of asOfDate
+  let reservoirBalancePaise = 0;
+  let cumulativeShortfallPaise = 0;
+  let asOfRow: DayBreakdownRow | undefined;
+  let prevRowBeforeAsOf: DayBreakdownRow | undefined;
+
+  for (let i = 0; i < breakdown.length; i++) {
+    const row = breakdown[i];
     if (row.date <= asOfDate && row.isPeriodDay) {
-      cumulativeOverspendPaise = row.cumulativeOverspendPaise;
+      reservoirBalancePaise = row.reservoirBalancePaise;
+      cumulativeShortfallPaise = row.cumulativeShortfallPaise;
+    }
+    if (row.date === asOfDate) {
+      asOfRow = row;
+      if (i > 0 && breakdown[i - 1].isPeriodDay) {
+        prevRowBeforeAsOf = breakdown[i - 1];
+      }
     }
   }
 
-  // Total spent in this calendar month
+  // Total spent across the calendar month
   let totalSpentPaise = 0;
+  let sumOfPeriodLimits = 0;
   for (const row of breakdown) {
     totalSpentPaise += row.spentPaise;
+    if (row.isPeriodDay) {
+      sumOfPeriodLimits += row.limitPaise;
+    }
   }
 
   const remainingMonthlyBudgetPaise = spendingBudgetPaise - totalSpentPaise;
-  const adjustedProjectedSavingsPaise =
-    originalSavingsGoalPaise - cumulativeOverspendPaise;
+  const projectedSavingsPaise = originalSavingsGoalPaise - cumulativeShortfallPaise;
+  const protectedSavingsPaise = originalSavingsGoalPaise; // Never changes
+
+  // unallocatedBudget = spendingBudget - sum of daily allowances for the period
+  const unallocatedBudgetPaise = spendingBudgetPaise - sumOfPeriodLimits;
+  const limitsExceedSpendingBudget = sumOfPeriodLimits > spendingBudgetPaise;
+
+  // availableToSpendToday = today's remaining allowance + reservoir from earlier days
+  let availableToSpendTodayPaise = 0;
+  if (asOfRow && asOfRow.isPeriodDay) {
+    const todayRemainingAllowance = Math.max(0, asOfRow.limitPaise - asOfRow.spentPaise);
+    const reservoirFromEarlierDays = prevRowBeforeAsOf ? prevRowBeforeAsOf.reservoirBalancePaise : 0;
+    availableToSpendTodayPaise = todayRemainingAllowance + reservoirFromEarlierDays;
+  }
+
+  // Unspent reservoir at month end (reported as unspent budget, not added to savings automatically)
+  const lastPeriodRow = breakdown[breakdown.length - 1];
+  const unspentReservoirPaise = lastPeriodRow ? lastPeriodRow.reservoirBalancePaise : 0;
 
   // Remaining days in period including asOfDate
   let remainingDays: number;
@@ -266,17 +399,17 @@ export function computeMonthSummary(
   let goalStatus: GoalStatus;
 
   if (isMonthFinished) {
-    if (cumulativeOverspendPaise === 0) {
+    if (cumulativeShortfallPaise === 0) {
       goalStatus = 'ACHIEVED';
-    } else if (adjustedProjectedSavingsPaise > 0) {
+    } else if (projectedSavingsPaise > 0) {
       goalStatus = 'PARTIAL';
     } else {
       goalStatus = 'MISSED';
     }
   } else {
-    if (cumulativeOverspendPaise === 0) {
+    if (cumulativeShortfallPaise === 0) {
       goalStatus = 'ON_TRACK';
-    } else if (adjustedProjectedSavingsPaise > 0) {
+    } else if (projectedSavingsPaise > 0) {
       goalStatus = 'REDUCED';
     } else {
       goalStatus = 'AT_RISK_OR_LOST';
@@ -286,17 +419,27 @@ export function computeMonthSummary(
   return {
     pocketMoneyPaise,
     originalSavingsGoalPaise,
+    protectedSavingsPaise,
     spendingBudgetPaise,
     totalSpentPaise,
     remainingMonthlyBudgetPaise,
-    cumulativeOverspendPaise,
-    adjustedProjectedSavingsPaise,
+    reservoirBalancePaise,
+    cumulativeShortfallPaise,
+    projectedSavingsPaise,
+    availableToSpendTodayPaise,
+    unallocatedBudgetPaise,
+    limitsExceedSpendingBudget,
+    unspentReservoirPaise,
     recommendedDailyLimitPaise,
     goalStatus,
     monthlyBudgetExceeded: remainingMonthlyBudgetPaise < 0,
     asOfDate,
     periodDays,
-    remainingDays
+    remainingDays,
+    rule_version: ruleVersion,
+    // Backwards-compatibility aliases
+    cumulativeOverspendPaise: cumulativeShortfallPaise,
+    adjustedProjectedSavingsPaise: projectedSavingsPaise
   };
 }
 
@@ -342,6 +485,5 @@ export function computeCategoryTotals(
     });
   }
 
-  // Sort descending by totalPaise
   return result.sort((a, b) => b.totalPaise - a.totalPaise);
 }
