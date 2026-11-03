@@ -1,18 +1,31 @@
 /**
- * BUDGET CONTEXT & STATE MANAGEMENT - Phase 3
+ * BUDGET CONTEXT & STATE MANAGEMENT - Phase 4
  *
- * Coordinates budget configuration, expenses, and reactive calculations
- * using ONLY the pure functions from /src/core/financeEngine.js.
+ * Integrated with the Storage Service Layer (/src/services/storage.js)
+ * and the Core Finance Engine (/src/core/financeEngine.js).
+ *
+ * Capabilities:
+ * - Data survives page refreshes via storageService.
+ * - One separate record per month ("YYYY-MM").
+ * - Automatic new-month detection.
+ * - Reserve Wallet carry-forward vs reset decision handling.
+ * - Late expense routing to previous months with downstream cascading.
+ * - Monthly history archive support.
  */
 
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   calculateInitialSpendingBudget,
   calculateDefaultDailyLimit,
   recalculateMonth,
   getDaysInMonth,
-  generateCycleDates
 } from '../core/financeEngine';
+import {
+  storageService,
+  getPreviousMonthString,
+  getNextMonthString,
+  formatMonthName,
+} from '../services/storage';
 
 export const BudgetContext = createContext(null);
 
@@ -27,7 +40,6 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ];
 
-// Helper to get today's date formatted as YYYY-MM-DD
 export function getTodayString() {
   const now = new Date();
   const y = now.getFullYear();
@@ -36,7 +48,6 @@ export function getTodayString() {
   return `${y}-${m}-${d}`;
 }
 
-// Helper to get current Year-Month string
 export function getCurrentMonthString() {
   const now = new Date();
   const y = now.getFullYear();
@@ -45,146 +56,227 @@ export function getCurrentMonthString() {
 }
 
 export function BudgetProvider({ children }) {
-  // Current month string 'YYYY-MM'
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthString());
+  const currentCalendarMonth = getCurrentMonthString();
+  const [activeMonth, setActiveMonth] = useState(currentCalendarMonth);
+  const [activeRecord, setActiveRecord] = useState(null);
 
-  // Budget configuration state
-  const [budgetConfig, setBudgetConfig] = useState({
-    pocketMoney: 2500,
-    dateReceived: 1,
-    savingsGoal: 1000,
-    customDailyLimit: 50, // default limit or user custom
-    isCustomLimit: true,
+  // New month rollover dialog state
+  const [rolloverDialog, setRolloverDialog] = useState({
+    isOpen: false,
+    newMonth: '',
+    previousMonth: '',
+    previousReserve: 0,
   });
 
-  // Expenses transaction state (in-memory for Phase 3)
-  const [transactions, setTransactions] = useState([]);
+  // Load or initialize active month record
+  const loadMonthRecord = useCallback((monthStr) => {
+    let record = storageService.getMonthRecord(monthStr);
 
-  // Calculate days in the selected month
+    if (!record) {
+      // Check if previous month exists to see if rollover prompt is needed
+      const prevMonthStr = getPreviousMonthString(monthStr);
+      const prevRecord = storageService.getMonthRecord(prevMonthStr);
+
+      const defaultStartingReserve = 0;
+      record = {
+        month: monthStr,
+        pocketMoney: prevRecord?.pocketMoney ?? 2500,
+        dateReceived: prevRecord?.dateReceived ?? 1,
+        savingsGoal: prevRecord?.savingsGoal ?? 1000,
+        dailyLimit: prevRecord?.dailyLimit ?? 50,
+        isCustomLimit: prevRecord?.isCustomLimit ?? false,
+        startingReserve: defaultStartingReserve,
+        carryForwardDecision: null,
+        isConfigured: false,
+        transactions: [],
+      };
+
+      // If previous month had reserve and carryForward decision not set, prompt rollover
+      if (prevRecord && prevRecord.calculation?.currentReserveBalance > 0 && !prevRecord.carryForwardDecision) {
+        setRolloverDialog({
+          isOpen: true,
+          newMonth: monthStr,
+          previousMonth: prevMonthStr,
+          previousReserve: prevRecord.calculation.currentReserveBalance,
+        });
+      }
+    }
+
+    const saved = storageService.saveMonthRecord(record);
+    setActiveRecord(saved);
+  }, []);
+
+  // Initial load on mount or month change
+  useEffect(() => {
+    loadMonthRecord(activeMonth);
+  }, [activeMonth, loadMonthRecord]);
+
+  // Derived days in active month
   const daysInSelectedMonth = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
+    const [year, month] = activeMonth.split('-').map(Number);
     return getDaysInMonth(year, month);
-  }, [selectedMonth]);
+  }, [activeMonth]);
 
   // Derived initial spending budget: Pocket Money - Savings Goal
   const spendingBudget = useMemo(() => {
+    if (!activeRecord) return 0;
     return calculateInitialSpendingBudget(
-      budgetConfig.pocketMoney,
-      budgetConfig.savingsGoal
+      activeRecord.pocketMoney,
+      activeRecord.savingsGoal
     );
-  }, [budgetConfig.pocketMoney, budgetConfig.savingsGoal]);
+  }, [activeRecord]);
 
   // Auto-calculated default daily limit
   const defaultDailyLimit = useMemo(() => {
     return calculateDefaultDailyLimit(spendingBudget, daysInSelectedMonth);
   }, [spendingBudget, daysInSelectedMonth]);
 
-  // Active effective daily limit
+  // Effective daily limit
   const effectiveDailyLimit = useMemo(() => {
-    if (budgetConfig.isCustomLimit && budgetConfig.customDailyLimit !== null && budgetConfig.customDailyLimit !== undefined) {
-      return Number(budgetConfig.customDailyLimit) || 0;
+    if (!activeRecord) return 50;
+    if (activeRecord.isCustomLimit && activeRecord.dailyLimit !== undefined) {
+      return Number(activeRecord.dailyLimit) || 0;
     }
     return defaultDailyLimit;
-  }, [budgetConfig.isCustomLimit, budgetConfig.customDailyLimit, defaultDailyLimit]);
+  }, [activeRecord, defaultDailyLimit]);
 
-  // Recalculate full monthly state via pure financeEngine
+  // Month calculation from storage record (always fresh)
   const monthCalculation = useMemo(() => {
-    return recalculateMonth({
-      month: selectedMonth,
-      receivedDate: budgetConfig.dateReceived,
+    if (!activeRecord) {
+      return recalculateMonth({
+        month: activeMonth,
+        dailyLimit: effectiveDailyLimit,
+        savingsGoal: 1000,
+        transactions: [],
+        startingReserve: 0,
+      });
+    }
+    return activeRecord.calculation || recalculateMonth({
+      month: activeRecord.month,
+      receivedDate: activeRecord.dateReceived,
       dailyLimit: effectiveDailyLimit,
-      savingsGoal: budgetConfig.savingsGoal,
-      pocketMoney: budgetConfig.pocketMoney,
-      transactions,
-      startingReserve: 0,
+      savingsGoal: activeRecord.savingsGoal,
+      pocketMoney: activeRecord.pocketMoney,
+      transactions: activeRecord.transactions || [],
+      startingReserve: activeRecord.startingReserve || 0,
     });
-  }, [selectedMonth, budgetConfig, effectiveDailyLimit, transactions]);
+  }, [activeRecord, activeMonth, effectiveDailyLimit]);
 
-  // Update budget configuration
+  // Save budget configuration
   const updateBudgetConfig = useCallback((updates) => {
-    setBudgetConfig((prev) => ({
-      ...prev,
+    if (!activeRecord) return;
+    const updated = {
+      ...activeRecord,
       ...updates,
-    }));
-  }, []);
+      isConfigured: true,
+    };
+    const saved = storageService.saveMonthRecord(updated);
+    setActiveRecord(saved);
+  }, [activeRecord]);
 
-  // Add an expense
+  // Add an expense (supports current or late past dates)
   const addExpense = useCallback(({ amount, category, date, note }) => {
-    const newTx = {
-      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    const targetDate = date || getTodayString();
+    const result = storageService.addOrUpdateExpense({
       amount: Math.max(0, Number(amount) || 0),
       category: category || 'Other',
-      date: date || getTodayString(),
+      date: targetDate,
       note: (note || '').trim(),
       createdAt: new Date().toISOString(),
-    };
+    });
 
-    setTransactions((prev) => [...prev, newTx]);
-    return newTx;
-  }, []);
+    // Refresh active month if the expense was added to it
+    if (result.month === activeMonth) {
+      setActiveRecord(storageService.getMonthRecord(activeMonth));
+    }
+    return result.expense;
+  }, [activeMonth]);
 
-  // Edit an existing expense
+  // Edit an expense
   const editExpense = useCallback((id, updates) => {
-    setTransactions((prev) =>
-      prev.map((tx) => {
-        if (tx.id !== id) return tx;
-        return {
-          ...tx,
-          amount: updates.amount !== undefined ? Math.max(0, Number(updates.amount) || 0) : tx.amount,
-          category: updates.category || tx.category,
-          date: updates.date || tx.date,
-          note: updates.note !== undefined ? updates.note.trim() : tx.note,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
-  }, []);
+    const result = storageService.addOrUpdateExpense({
+      ...updates,
+      id,
+    });
+    if (result.month === activeMonth) {
+      setActiveRecord(storageService.getMonthRecord(activeMonth));
+    }
+  }, [activeMonth]);
 
   // Delete an expense
   const deleteExpense = useCallback((id) => {
-    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
-  }, []);
+    storageService.deleteExpense(id, activeMonth);
+    setActiveRecord(storageService.getMonthRecord(activeMonth));
+  }, [activeMonth]);
 
-  // Helper to load 4-day example data directly for quick testing
+  // Handle rollover decision (carry forward vs reset)
+  const handleRolloverChoice = useCallback((carryForward) => {
+    const result = storageService.resolveCarryForward({
+      newMonth: rolloverDialog.newMonth,
+      carryForward,
+    });
+
+    setRolloverDialog((prev) => ({ ...prev, isOpen: false }));
+    setActiveRecord(storageService.getMonthRecord(rolloverDialog.newMonth));
+    return result;
+  }, [rolloverDialog.newMonth]);
+
+  // Helper to load 4-day example data directly
   const loadFourDayExample = useCallback(() => {
-    const today = getTodayString();
-    const parts = today.split('-');
-    const year = parts[0];
-    const month = parts[1];
-
-    // Day 1 to Day 4 of current month
+    const [year, month] = activeMonth.split('-');
     const d1 = `${year}-${month}-01`;
     const d2 = `${year}-${month}-02`;
     const d3 = `${year}-${month}-03`;
     const d4 = `${year}-${month}-04`;
 
-    setBudgetConfig({
+    const fourDayRecord = {
+      month: activeMonth,
       pocketMoney: 2500,
       dateReceived: 1,
       savingsGoal: 1000,
-      customDailyLimit: 50,
+      dailyLimit: 50,
       isCustomLimit: true,
-    });
+      startingReserve: 0,
+      isConfigured: true,
+      transactions: [
+        { id: 'tx_ex_1', date: d1, amount: 0, category: 'Other', note: 'Saturday - Spend 0' },
+        { id: 'tx_ex_2', date: d2, amount: 100, category: 'Food', note: 'Sunday - Food outing' },
+        { id: 'tx_ex_3', date: d3, amount: 30, category: 'Travel', note: 'Monday - Metro fare' },
+        { id: 'tx_ex_4', date: d4, amount: 120, category: 'Shopping', note: 'Tuesday - Books purchase' },
+      ],
+    };
 
-    setTransactions([
-      { id: 'tx_ex_1', date: d1, amount: 0, category: 'Other', note: 'Saturday - Spend 0' },
-      { id: 'tx_ex_2', date: d2, amount: 100, category: 'Food', note: 'Sunday - Food outing' },
-      { id: 'tx_ex_3', date: d3, amount: 30, category: 'Travel', note: 'Monday - Metro fare' },
-      { id: 'tx_ex_4', date: d4, amount: 120, category: 'Shopping', note: 'Tuesday - Books purchase' },
-    ]);
-  }, []);
+    const saved = storageService.saveMonthRecord(fourDayRecord);
+    setActiveRecord(saved);
+  }, [activeMonth]);
 
-  // Reset transactions
+  // Clear current active month's transactions
   const clearTransactions = useCallback(() => {
-    setTransactions([]);
-  }, []);
+    if (!activeRecord) return;
+    const updated = {
+      ...activeRecord,
+      transactions: [],
+    };
+    const saved = storageService.saveMonthRecord(updated);
+    setActiveRecord(saved);
+  }, [activeRecord]);
 
   const value = {
-    selectedMonth,
-    setSelectedMonth,
-    budgetConfig,
+    activeMonth,
+    setActiveMonth,
+    selectedMonth: activeMonth,
+    setSelectedMonth: setActiveMonth,
+    budgetConfig: {
+      pocketMoney: activeRecord?.pocketMoney ?? 2500,
+      dateReceived: activeRecord?.dateReceived ?? 1,
+      savingsGoal: activeRecord?.savingsGoal ?? 1000,
+      customDailyLimit: activeRecord?.dailyLimit ?? 50,
+      isCustomLimit: activeRecord?.isCustomLimit ?? false,
+      startingReserve: activeRecord?.startingReserve ?? 0,
+      isConfigured: activeRecord?.isConfigured ?? false,
+    },
     updateBudgetConfig,
-    transactions,
+    transactions: activeRecord?.transactions ?? [],
     addExpense,
     editExpense,
     deleteExpense,
@@ -195,6 +287,11 @@ export function BudgetProvider({ children }) {
     effectiveDailyLimit,
     daysInSelectedMonth,
     monthCalculation,
+    rolloverDialog,
+    setRolloverDialog,
+    handleRolloverChoice,
+    storageService,
+    formatMonthName,
   };
 
   return <BudgetContext.Provider value={value}>{children}</BudgetContext.Provider>;
@@ -207,4 +304,3 @@ export function useBudget() {
   }
   return context;
 }
-

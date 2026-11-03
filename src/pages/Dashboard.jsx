@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   Wallet,
   PiggyBank,
@@ -29,6 +29,11 @@ export default function Dashboard() {
     monthCalculation,
     loadFourDayExample
   } = useBudget();
+
+  // Automatic new-month detection: on first open in a new month with no budget, redirect to setup
+  if (!budgetConfig.isConfigured) {
+    return <Navigate to="/setup" replace />;
+  }
 
   const todayStr = getTodayString();
   // State to inspect a particular day in the cycle (defaults to today or first day of cycle)
