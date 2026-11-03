@@ -65,7 +65,7 @@ export default function SignUp() {
             </div>
             <span className="brand-title">Piggy<span>Pocket</span></span>
           </div>
-          <h2 className="auth-title">Create your account 🚀</h2>
+          <h2 className="auth-title">Create your account</h2>
           <p className="auth-subtitle">Never run out of pocket money before month-end</p>
         </div>
 

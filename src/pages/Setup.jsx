@@ -11,7 +11,7 @@ export default function Setup() {
     <div>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          Monthly Budget Setup 🎯
+          Monthly Budget Setup
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Configure pocket money, savings target, and daily spending limit.

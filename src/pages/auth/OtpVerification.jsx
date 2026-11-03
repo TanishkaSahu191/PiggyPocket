@@ -106,7 +106,7 @@ export default function OtpVerification() {
           <div className="brand-icon-box" style={{ margin: '0 auto 12px auto' }}>
             <ShieldCheck size={24} />
           </div>
-          <h2 className="auth-title">Verify Your Account 📲</h2>
+          <h2 className="auth-title">Verify Your Account</h2>
           <p className="auth-subtitle">
             Enter the 6-digit code sent to{' '}
             <strong>{pendingOtpEmail || 'your email / phone'}</strong>

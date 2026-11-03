@@ -46,7 +46,7 @@ export default function ForgotPassword() {
             </div>
             <span className="brand-title">Piggy<span>Pocket</span></span>
           </div>
-          <h2 className="auth-title">Reset Password 🔑</h2>
+          <h2 className="auth-title">Reset Password</h2>
           <p className="auth-subtitle">
             Enter your registered email and we'll send a 6-digit OTP code
           </p>

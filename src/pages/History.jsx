@@ -6,7 +6,7 @@ export default function History() {
     <div>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          Monthly History 📚
+          Monthly History
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Archive of past months' spending, reserve balances, and saved goals.

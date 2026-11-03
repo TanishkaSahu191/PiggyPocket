@@ -6,7 +6,7 @@ export default function Reports() {
     <div>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          Budget Reports & Analytics 📊
+          Budget Reports & Analytics
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Visual insights into spending habits, savings rate, and reserve health.

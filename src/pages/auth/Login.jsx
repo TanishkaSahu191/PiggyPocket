@@ -70,7 +70,7 @@ export default function Login() {
             </div>
             <span className="brand-title">Piggy<span>Pocket</span></span>
           </div>
-          <h2 className="auth-title">Welcome back! 👋</h2>
+          <h2 className="auth-title">Welcome back</h2>
           <p className="auth-subtitle">Log in to track your pocket money & daily limits</p>
         </div>
 

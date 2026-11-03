@@ -45,7 +45,7 @@ export function Header() {
 
       <div className="header-right">
         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-          Hey, <strong>{firstName}</strong> 👋
+          Hey, <strong>{firstName}</strong>
         </span>
 
         <button

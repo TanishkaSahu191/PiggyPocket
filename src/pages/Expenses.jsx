@@ -7,7 +7,7 @@ export default function Expenses() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-            Daily Expenses 🧾
+            Daily Expenses
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
             Log, categorize, and monitor day-to-day spending.

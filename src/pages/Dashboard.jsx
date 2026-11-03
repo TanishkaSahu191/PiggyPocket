@@ -52,7 +52,7 @@ export default function Dashboard() {
             Phase 1 • Foundation
           </span>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '4px' }}>
-            Welcome, {firstName}! 🎓
+            Welcome, {firstName}
           </h2>
           <p style={{ opacity: 0.9, fontSize: '0.92rem' }}>
             Smart Budget Tracker is initialized. Financial logic & spending engines will connect in upcoming phases.

@@ -9,7 +9,7 @@ export default function Settings() {
     <div>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          Settings & Account ⚙️
+          Settings & Account
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Manage your student profile and application preferences.
