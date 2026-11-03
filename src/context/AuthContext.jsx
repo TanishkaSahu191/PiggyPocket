@@ -1,0 +1,104 @@
+/**
+ * =======================================================================
+ * TEMPORARY MOCK AUTH CONTEXT - Phase 1 Only.
+ *
+ * This context provides mock authentication state & actions for Phase 1.
+ * Real authentication with JWT, PostgreSQL, Express backend, and
+ * real OTP handling will replace this in Stage 2 / Phase 5.
+ * =======================================================================
+ */
+
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { authService } from '../services/authService';
+
+export const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pendingOtpEmail, setPendingOtpEmail] = useState('');
+
+  // Hydrate session from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const activeSession = authService.getCurrentSession();
+      if (activeSession) {
+        setUser(activeSession);
+      }
+      const pending = authService.getPendingOtpInfo();
+      if (pending?.email) {
+        setPendingOtpEmail(pending.email);
+      }
+    } catch (err) {
+      console.error('Error restoring session:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Log in user with email and password
+   */
+  const login = useCallback(async (email, password) => {
+    const session = await authService.login(email, password);
+    setUser(session);
+    return session;
+  }, []);
+
+  /**
+   * Register a new user and initiate OTP verification
+   */
+  const signup = useCallback(async (formData) => {
+    const res = await authService.signUp(formData);
+    setPendingOtpEmail(res.email);
+    return res;
+  }, []);
+
+  /**
+   * Initiate forgot password flow
+   */
+  const forgotPassword = useCallback(async (email) => {
+    const res = await authService.forgotPassword(email);
+    setPendingOtpEmail(res.email);
+    return res;
+  }, []);
+
+  /**
+   * Verify 6-digit OTP
+   * TODO: Real OTP verification endpoint will be connected in Phase 5.
+   */
+  const verifyOtp = useCallback(async (otpCode) => {
+    const emailToVerify = pendingOtpEmail || authService.getPendingOtpInfo()?.email;
+    if (!emailToVerify) {
+      throw new Error('No pending OTP verification session found.');
+    }
+    const session = await authService.verifyOtp(emailToVerify, otpCode);
+    setUser(session);
+    setPendingOtpEmail('');
+    return session;
+  }, [pendingOtpEmail]);
+
+  /**
+   * Log out active user
+   */
+  const logout = useCallback(async () => {
+    await authService.logout();
+    setUser(null);
+  }, []);
+
+  const value = {
+    user,
+    isAuthenticated: Boolean(user),
+    loading,
+    pendingOtpEmail,
+    setPendingOtpEmail,
+    login,
+    signup,
+    forgotPassword,
+    verifyOtp,
+    logout
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+

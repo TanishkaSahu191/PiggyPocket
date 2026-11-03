@@ -1,0 +1,73 @@
+:root {
+  /* Brand / Primary Palette (Modern Indigo) */
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-dark: #3730a3;
+  --primary-glow: rgba(79, 70, 229, 0.15);
+
+  /* Student Budget - Visual Separation Colors (Core Requirement) */
+  /* Reserve Wallet: Sky Blue theme */
+  --wallet-primary: #0284c7;
+  --wallet-bg: #f0f9ff;
+  --wallet-border: #bae6fd;
+  --wallet-badge: #0369a1;
+
+  /* Savings Goal: Emerald theme */
+  --savings-primary: #059669;
+  --savings-bg: #ecfdf5;
+  --savings-border: #a7f3d0;
+  --savings-badge: #047857;
+
+  /* Status Colors */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+
+  /* Neutral Surface & Backgrounds */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+  --bg-sidebar: #0f172a;
+  --bg-sidebar-hover: #1e293b;
+  --bg-input: #ffffff;
+
+  /* Typography Colors */
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Borders & Dividers */
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #4f46e5;
+
+  /* Layout Measurements */
+  --sidebar-width: 260px;
+  --header-height: 68px;
+  --bottom-nav-height: 64px;
+  --max-content-width: 1200px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
