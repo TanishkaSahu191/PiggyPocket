@@ -3,6 +3,7 @@
  */
 
 import pg from 'pg';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -13,9 +14,21 @@ const connectionString = process.env.DATABASE_URL;
 let pool = null;
 let isPgConnected = false;
 
+const DEFAULT_DEMO_USER = {
+  id: 'usr_demo_101',
+  full_name: 'Tanishka Sahu',
+  email: 'tanishkasahu191@gmail.com',
+  phone: '9876543210',
+  password_hash: bcrypt.hashSync('Password123!', 10),
+  is_email_verified: true,
+  is_phone_verified: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 // In-memory relational tables for local development fallback
 const memoryDb = {
-  users: [],
+  users: [{ ...DEFAULT_DEMO_USER }],
   otp_verifications: [],
   monthly_budgets: [],
   transactions: [],
@@ -244,7 +257,7 @@ function executeMemoryQuery(text, params = []) {
 }
 
 export function resetMemoryDb() {
-  memoryDb.users = [];
+  memoryDb.users = [{ ...DEFAULT_DEMO_USER }];
   memoryDb.otp_verifications = [];
   memoryDb.monthly_budgets = [];
   memoryDb.transactions = [];

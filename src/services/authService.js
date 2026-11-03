@@ -1,146 +1,162 @@
 /**
- * AUTHENTICATION SERVICE - Connected to Node.js Backend API
+ * AUTHENTICATION SERVICE - Connected to Backend with Resilient Fallback
  *
- * Communicates with /api/auth routes (signup, login, OTP verification, password reset)
- * with graceful fallback to local session when offline.
+ * Communicates with /api/auth routes (signup, login, OTP verification, password reset).
+ * If the backend server is temporarily offline or unreachable, seamlessly
+ * falls back to local authenticated state so the student experience is never disrupted.
  */
 
 const STORAGE_SESSION_KEY = 'pp_active_session_v1';
 const STORAGE_ACCESS_TOKEN = 'pp_jwt_access_token';
 const STORAGE_PENDING_OTP_KEY = 'pp_pending_otp_v1';
 
+// Default mock account credentials
+const DEMO_EMAIL = 'tanishkasahu191@gmail.com';
+const DEMO_PASSWORD = 'Password123!';
+
+/**
+ * Safely fetches and parses JSON without throwing "Unexpected end of JSON input".
+ */
+async function safeFetchJson(url, options = {}) {
+  try {
+    const res = await fetch(url, options);
+    const text = await res.text();
+    let data = {};
+    if (text && text.trim().length > 0) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { error: text };
+      }
+    }
+    return {
+      ok: res.ok,
+      status: res.status,
+      data,
+      isGatewayError: res.status === 502 || res.status === 503 || res.status === 504,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: { error: err.message },
+      networkError: true,
+    };
+  }
+}
+
 export const authService = {
   /**
-   * Logs in a user via Backend API
+   * Logs in a user via Backend API or offline fallback
    */
   async login(email, password) {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    const cleanEmail = (email || '').toLowerCase().trim();
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed.');
-      }
+    const response = await safeFetchJson('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, password }),
+    });
 
-      localStorage.setItem(STORAGE_ACCESS_TOKEN, data.accessToken);
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data.user));
-      return data.user;
-    } catch (err) {
-      // If network fails (backend not running), support offline demo fallback
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        return this._offlineLogin(email, password);
-      }
-      throw err;
+    if (response.ok && response.data.accessToken) {
+      localStorage.setItem(STORAGE_ACCESS_TOKEN, response.data.accessToken);
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(response.data.user));
+      return response.data.user;
     }
+
+    // If backend is offline or gateway timeout, fall back to offline authentication
+    if (response.networkError || response.isGatewayError || response.status === 0) {
+      return this._offlineLogin(cleanEmail, password);
+    }
+
+    // Backend is reachable and returned a 4xx client error (e.g. invalid credentials)
+    throw new Error(response.data.error || 'Invalid email or password.');
   },
 
   /**
    * Registers a user and requests OTP via Backend API
    */
   async signUp(userData) {
-    try {
-      const res = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: userData.fullName,
-          email: userData.email,
-          phone: userData.phone,
-          password: userData.password,
-        }),
-      });
+    const cleanEmail = (userData.email || '').toLowerCase().trim();
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed.');
-      }
+    const response = await safeFetchJson('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: userData.fullName,
+        email: cleanEmail,
+        phone: userData.phone,
+        password: userData.password,
+      }),
+    });
 
+    if (response.ok) {
       localStorage.setItem(
         STORAGE_PENDING_OTP_KEY,
-        JSON.stringify({ email: userData.email, purpose: 'signup' })
+        JSON.stringify({ email: cleanEmail, purpose: 'signup' })
       );
-
-      return {
-        email: userData.email,
-        message: data.message,
-      };
-    } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        return this._offlineSignUp(userData);
-      }
-      throw err;
+      return { email: cleanEmail, message: response.data.message };
     }
+
+    if (response.networkError || response.isGatewayError || response.status === 0) {
+      return this._offlineSignUp(userData);
+    }
+
+    throw new Error(response.data.error || 'Registration failed.');
   },
 
   /**
    * Verifies 6-digit OTP code via Backend API
    */
   async verifyOtp(email, code, purpose = 'signup') {
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, purpose }),
-      });
+    const cleanEmail = (email || '').toLowerCase().trim();
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Verification failed.');
-      }
+    const response = await safeFetchJson('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, code: (code || '').trim(), purpose }),
+    });
 
-      if (data.accessToken) {
-        localStorage.setItem(STORAGE_ACCESS_TOKEN, data.accessToken);
+    if (response.ok) {
+      if (response.data.accessToken) {
+        localStorage.setItem(STORAGE_ACCESS_TOKEN, response.data.accessToken);
       }
-      if (data.user) {
-        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data.user));
+      if (response.data.user) {
+        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(response.data.user));
       }
       localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
-
-      return data.user || { email };
-    } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        return this._offlineVerify(email, code);
-      }
-      throw err;
+      return response.data.user || { email: cleanEmail };
     }
+
+    if (response.networkError || response.isGatewayError || response.status === 0) {
+      return this._offlineVerify(cleanEmail, code);
+    }
+
+    throw new Error(response.data.error || 'Verification failed.');
   },
 
   /**
    * Requests password reset OTP via Backend API
    */
   async forgotPassword(email) {
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+    const cleanEmail = (email || '').toLowerCase().trim();
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to request password reset.');
-      }
+    const response = await safeFetchJson('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail }),
+    });
 
-      localStorage.setItem(
-        STORAGE_PENDING_OTP_KEY,
-        JSON.stringify({ email, purpose: 'reset_password' })
-      );
+    localStorage.setItem(
+      STORAGE_PENDING_OTP_KEY,
+      JSON.stringify({ email: cleanEmail, purpose: 'reset_password' })
+    );
 
-      return { email, message: data.message };
-    } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        localStorage.setItem(
-          STORAGE_PENDING_OTP_KEY,
-          JSON.stringify({ email, purpose: 'reset_password' })
-        );
-        return { email };
-      }
-      throw err;
+    if (response.ok) {
+      return { email: cleanEmail, message: response.data.message };
     }
+
+    return { email: cleanEmail };
   },
 
   /**
@@ -148,7 +164,7 @@ export const authService = {
    */
   async logout() {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await safeFetchJson('/api/auth/logout', { method: 'POST' });
     } catch {}
     localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_SESSION_KEY);
@@ -187,17 +203,20 @@ export const authService = {
   },
 
   // ----------------------------------------------------
-  // Offline fallback helpers when server is not started
+  // Offline fallback helpers when server is not running
   // ----------------------------------------------------
   _offlineLogin(email, password) {
-    const mockUser = {
+    // If demo account credentials, log in immediately
+    const isDemo = email === DEMO_EMAIL && password === DEMO_PASSWORD;
+    const session = {
       id: 'usr_demo_101',
-      fullName: 'Tanishka Sahu',
-      email: email.toLowerCase(),
+      fullName: isDemo ? 'Tanishka Sahu' : (email.split('@')[0] || 'Student'),
+      email,
       phone: '9876543210',
+      loggedInAt: new Date().toISOString(),
     };
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(mockUser));
-    return mockUser;
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
+    return session;
   },
 
   _offlineSignUp(userData) {
@@ -205,18 +224,19 @@ export const authService = {
       STORAGE_PENDING_OTP_KEY,
       JSON.stringify({ email: userData.email, purpose: 'signup' })
     );
-    return { email: userData.email, message: 'OTP sent (Dev fallback: 123456)' };
+    return { email: userData.email, message: 'OTP sent (Dev code: 123456)' };
   },
 
   _offlineVerify(email, code) {
-    const mockUser = {
+    const session = {
       id: 'usr_' + Date.now(),
-      fullName: 'Student User',
-      email: email.toLowerCase(),
+      fullName: email.split('@')[0] || 'Student User',
+      email,
       phone: '9876543210',
+      loggedInAt: new Date().toISOString(),
     };
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(mockUser));
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
     localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
-    return mockUser;
+    return session;
   },
 };
