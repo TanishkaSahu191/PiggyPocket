@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { BudgetProvider } from './context/BudgetContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -23,8 +24,9 @@ import NotFound from './pages/NotFound';
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <BudgetProvider>
+        <BrowserRouter>
+          <Routes>
           {/* Public Auth Routes (Accessible without login) */}
           <Route
             path="/login"
@@ -78,7 +80,8 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+    </BudgetProvider>
+  </AuthProvider>
   );
 }
 
