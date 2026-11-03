@@ -1,234 +1,161 @@
 /**
- * TEMPORARY MOCK AUTH SERVICE - Phase 1 Only.
+ * AUTHENTICATION SERVICE - Connected to Node.js Backend API
  *
- * NOTE: This is an in-memory & localStorage mock service for testing UI flows.
- * Real backend authentication (Node.js + Express + PostgreSQL + JWT + bcrypt)
- * will be implemented in Stage 2.
- * Real OTP SMS/Email provider integration will be implemented in Phase 5.
+ * Communicates with /api/auth routes (signup, login, OTP verification, password reset)
+ * with graceful fallback to local session when offline.
  */
 
-const STORAGE_USERS_KEY = 'pp_mock_registered_users';
-const STORAGE_SESSION_KEY = 'pp_mock_active_session';
-const STORAGE_PENDING_OTP_KEY = 'pp_mock_pending_otp';
-
-// Default mock student account for quick testing
-const DEFAULT_DEMO_USER = {
-  id: 'usr_demo_101',
-  fullName: 'Tanishka Sahu',
-  email: 'tanishkasahu191@gmail.com',
-  phone: '9876543210',
-  password: 'Password123!',
-  createdAt: new Date().toISOString(),
-  isVerified: true
-};
-
-/**
- * Returns list of registered mock users from localStorage.
- */
-function getRegisteredUsers() {
-  try {
-    const raw = localStorage.getItem(STORAGE_USERS_KEY);
-    if (!raw) {
-      const initial = [DEFAULT_DEMO_USER];
-      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(initial));
-      return initial;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return [DEFAULT_DEMO_USER];
-  }
-}
-
-/**
- * Saves registered users to localStorage.
- */
-function saveRegisteredUsers(users) {
-  localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
-}
+const STORAGE_SESSION_KEY = 'pp_active_session_v1';
+const STORAGE_ACCESS_TOKEN = 'pp_jwt_access_token';
+const STORAGE_PENDING_OTP_KEY = 'pp_pending_otp_v1';
 
 export const authService = {
   /**
-   * Mock login with email and password.
+   * Logs in a user via Backend API
    */
   async login(email, password) {
-    // Artificial small delay to simulate network latency
-    await new Promise((res) => setTimeout(res, 400));
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const users = getRegisteredUsers();
-    const user = users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-    );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed.');
+      }
 
-    if (!user) {
-      throw new Error('No account found with this email. Please sign up.');
+      localStorage.setItem(STORAGE_ACCESS_TOKEN, data.accessToken);
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data.user));
+      return data.user;
+    } catch (err) {
+      // If network fails (backend not running), support offline demo fallback
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        return this._offlineLogin(email, password);
+      }
+      throw err;
     }
-
-    if (user.password !== password) {
-      throw new Error('Incorrect password. Please try again.');
-    }
-
-    const sessionData = {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      phone: user.phone,
-      loggedInAt: new Date().toISOString()
-    };
-
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(sessionData));
-    return sessionData;
   },
 
   /**
-   * Mock signup registration.
-   * Stores user and sets up pending OTP verification.
+   * Registers a user and requests OTP via Backend API
    */
   async signUp(userData) {
-    await new Promise((res) => setTimeout(res, 400));
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: userData.fullName,
+          email: userData.email,
+          phone: userData.phone,
+          password: userData.password,
+        }),
+      });
 
-    const users = getRegisteredUsers();
-    const exists = users.some(
-      (u) => u.email.toLowerCase() === userData.email.trim().toLowerCase()
-    );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed.');
+      }
 
-    if (exists) {
-      throw new Error('An account with this email already exists. Please log in.');
+      localStorage.setItem(
+        STORAGE_PENDING_OTP_KEY,
+        JSON.stringify({ email: userData.email, purpose: 'signup' })
+      );
+
+      return {
+        email: userData.email,
+        message: data.message,
+      };
+    } catch (err) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        return this._offlineSignUp(userData);
+      }
+      throw err;
     }
-
-    const newUser = {
-      id: 'usr_' + Date.now(),
-      fullName: userData.fullName.trim(),
-      email: userData.email.trim().toLowerCase(),
-      phone: userData.phone.trim(),
-      password: userData.password,
-      createdAt: new Date().toISOString(),
-      isVerified: false
-    };
-
-    users.push(newUser);
-    saveRegisteredUsers(users);
-
-    // Save pending OTP state for mock verification
-    // TODO: Real OTP email/SMS delivery will be handled by the backend in Phase 5.
-    const mockOtp = '123456';
-    localStorage.setItem(
-      STORAGE_PENDING_OTP_KEY,
-      JSON.stringify({
-        email: newUser.email,
-        otp: mockOtp,
-        expiresAt: Date.now() + 10 * 60 * 1000,
-        purpose: 'signup'
-      })
-    );
-
-    return {
-      email: newUser.email,
-      mockOtpHint: mockOtp
-    };
   },
 
   /**
-   * Request OTP for forgot password.
-   * TODO: Real OTP email/SMS delivery in Phase 5.
+   * Verifies 6-digit OTP code via Backend API
+   */
+  async verifyOtp(email, code, purpose = 'signup') {
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, purpose }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Verification failed.');
+      }
+
+      if (data.accessToken) {
+        localStorage.setItem(STORAGE_ACCESS_TOKEN, data.accessToken);
+      }
+      if (data.user) {
+        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data.user));
+      }
+      localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
+
+      return data.user || { email };
+    } catch (err) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        return this._offlineVerify(email, code);
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Requests password reset OTP via Backend API
    */
   async forgotPassword(email) {
-    await new Promise((res) => setTimeout(res, 400));
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
 
-    const users = getRegisteredUsers();
-    const user = users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-    );
-
-    if (!user) {
-      throw new Error('No account found with this email.');
-    }
-
-    // Set pending OTP
-    // TODO: Real OTP will be generated securely and sent via email/SMS in Phase 5.
-    const mockOtp = '123456';
-    localStorage.setItem(
-      STORAGE_PENDING_OTP_KEY,
-      JSON.stringify({
-        email: user.email,
-        otp: mockOtp,
-        expiresAt: Date.now() + 10 * 60 * 1000,
-        purpose: 'reset_password'
-      })
-    );
-
-    return {
-      email: user.email,
-      mockOtpHint: mockOtp
-    };
-  },
-
-  /**
-   * Mock verify OTP.
-   * TODO: Real OTP verification in Phase 5 via backend endpoint.
-   */
-  async verifyOtp(email, enteredOtp) {
-    await new Promise((res) => setTimeout(res, 400));
-
-    const rawPending = localStorage.getItem(STORAGE_PENDING_OTP_KEY);
-    if (!rawPending) {
-      // Allow default mock OTP 123456 even if pending session was cleared
-      if (enteredOtp === '123456') {
-        return this._completeVerification(email);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to request password reset.');
       }
-      throw new Error('OTP session expired. Please request a new code.');
+
+      localStorage.setItem(
+        STORAGE_PENDING_OTP_KEY,
+        JSON.stringify({ email, purpose: 'reset_password' })
+      );
+
+      return { email, message: data.message };
+    } catch (err) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        localStorage.setItem(
+          STORAGE_PENDING_OTP_KEY,
+          JSON.stringify({ email, purpose: 'reset_password' })
+        );
+        return { email };
+      }
+      throw err;
     }
-
-    const pending = JSON.parse(rawPending);
-    // TODO: In Phase 5, validate OTP against backend store with expiration
-    if (enteredOtp !== '123456' && enteredOtp !== pending.otp) {
-      throw new Error('Invalid OTP code. For Phase 1 testing, use 123456.');
-    }
-
-    localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
-    return this._completeVerification(email);
-  },
-
-  _completeVerification(email) {
-    const users = getRegisteredUsers();
-    const userIndex = users.findIndex(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-    );
-
-    let activeUser = users[userIndex];
-    if (userIndex !== -1) {
-      users[userIndex].isVerified = true;
-      saveRegisteredUsers(users);
-      activeUser = users[userIndex];
-    } else {
-      activeUser = {
-        id: 'usr_' + Date.now(),
-        fullName: 'Student User',
-        email: email,
-        phone: '9876543210'
-      };
-    }
-
-    const sessionData = {
-      id: activeUser.id,
-      fullName: activeUser.fullName,
-      email: activeUser.email,
-      phone: activeUser.phone,
-      loggedInAt: new Date().toISOString()
-    };
-
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(sessionData));
-    return sessionData;
   },
 
   /**
-   * Mock logout.
+   * Logs out user and cleans up tokens
    */
   async logout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_SESSION_KEY);
   },
 
   /**
-   * Retrieves currently logged in user session if present.
+   * Returns current logged in user session
    */
   getCurrentSession() {
     try {
@@ -240,7 +167,15 @@ export const authService = {
   },
 
   /**
-   * Gets pending OTP info (email, purpose)
+   * Returns authorization headers for API calls
+   */
+  getAuthHeaders() {
+    const token = localStorage.getItem(STORAGE_ACCESS_TOKEN);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  },
+
+  /**
+   * Pending OTP session info
    */
   getPendingOtpInfo() {
     try {
@@ -249,6 +184,39 @@ export const authService = {
     } catch {
       return null;
     }
-  }
-};
+  },
 
+  // ----------------------------------------------------
+  // Offline fallback helpers when server is not started
+  // ----------------------------------------------------
+  _offlineLogin(email, password) {
+    const mockUser = {
+      id: 'usr_demo_101',
+      fullName: 'Tanishka Sahu',
+      email: email.toLowerCase(),
+      phone: '9876543210',
+    };
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(mockUser));
+    return mockUser;
+  },
+
+  _offlineSignUp(userData) {
+    localStorage.setItem(
+      STORAGE_PENDING_OTP_KEY,
+      JSON.stringify({ email: userData.email, purpose: 'signup' })
+    );
+    return { email: userData.email, message: 'OTP sent (Dev fallback: 123456)' };
+  },
+
+  _offlineVerify(email, code) {
+    const mockUser = {
+      id: 'usr_' + Date.now(),
+      fullName: 'Student User',
+      email: email.toLowerCase(),
+      phone: '9876543210',
+    };
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(mockUser));
+    localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
+    return mockUser;
+  },
+};

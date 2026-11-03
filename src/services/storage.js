@@ -15,6 +15,7 @@
  */
 
 import { recalculateMonth } from '../core/financeEngine';
+import { authService } from './authService';
 
 export const STORAGE_KEYS = {
   MONTHS_DICT: 'pp_budget_months_v1',
@@ -343,6 +344,36 @@ export const storageService = {
       decision: carryForward ? 'carried' : 'reset',
       previousReserve: prevFinalReserve,
     };
+  },
+
+  /**
+   * Migrates local storage records to backend PostgreSQL database
+   */
+  async migrateLocalStorageToBackend() {
+    const store = getStore();
+    if (!store || Object.keys(store).length === 0) {
+      return { migrated: false, message: 'No local records to migrate.' };
+    }
+
+    try {
+      const res = await fetch('/api/budgets/sync-local', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authService.getAuthHeaders(),
+        },
+        body: JSON.stringify({ localRecords: store }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Backend sync returned non-OK status');
+      }
+
+      const data = await res.json();
+      return { migrated: true, data };
+    } catch (err) {
+      return { migrated: false, error: err.message };
+    }
   },
 
   /**
