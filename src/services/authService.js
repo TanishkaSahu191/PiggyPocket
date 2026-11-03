@@ -33,7 +33,7 @@ async function safeFetchJson(url, options = {}) {
       ok: res.ok,
       status: res.status,
       data,
-      isGatewayError: res.status === 502 || res.status === 503 || res.status === 504,
+      isServerError: res.status >= 500,
     };
   } catch (err) {
     return {
@@ -41,6 +41,7 @@ async function safeFetchJson(url, options = {}) {
       status: 0,
       data: { error: err.message },
       networkError: true,
+      isServerError: true,
     };
   }
 }
@@ -64,12 +65,12 @@ export const authService = {
       return response.data.user;
     }
 
-    // If backend is offline or gateway timeout, fall back to offline authentication
-    if (response.networkError || response.isGatewayError || response.status === 0) {
+    // If backend is offline, proxy error, or 5xx server error, fall back to offline authentication
+    if (response.networkError || response.isServerError || response.status === 0) {
       return this._offlineLogin(cleanEmail, password);
     }
 
-    // Backend is reachable and returned a 4xx client error (e.g. invalid credentials)
+    // Backend is reachable and returned a 4xx client error (e.g. 401 invalid credentials)
     throw new Error(response.data.error || 'Invalid email or password.');
   },
 
@@ -98,7 +99,7 @@ export const authService = {
       return { email: cleanEmail, message: response.data.message };
     }
 
-    if (response.networkError || response.isGatewayError || response.status === 0) {
+    if (response.networkError || response.isServerError || response.status === 0) {
       return this._offlineSignUp(userData);
     }
 
@@ -128,7 +129,7 @@ export const authService = {
       return response.data.user || { email: cleanEmail };
     }
 
-    if (response.networkError || response.isGatewayError || response.status === 0) {
+    if (response.networkError || response.isServerError || response.status === 0) {
       return this._offlineVerify(cleanEmail, code);
     }
 
