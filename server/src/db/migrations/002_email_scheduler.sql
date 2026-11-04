@@ -19,3 +19,4 @@ ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS daily_email_enabled BOOLEAN D
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS delivery_hour INT DEFAULT 22;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS time_zone VARCHAR(50) DEFAULT 'Asia/Kolkata';
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS notification_email VARCHAR(255);
+

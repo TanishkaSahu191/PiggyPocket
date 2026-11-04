@@ -12,3 +12,4 @@ router.post('/send-test-email', settingsController.sendTestEmail);
 router.post('/trigger-daily-scheduler', settingsController.triggerDailyScheduler);
 
 export default router;
+

@@ -1,3 +1,14 @@
+/* =======================================================================
+   TACTILE SKEUOMORPHIC CRAFT & LEATHER AUTHENTICATION STYLING
+   Inspired by tactile craft physical realism:
+   - Stitched saddle leather badges
+   - Recessed groove input slots with brushed metal rivet knobs
+   - Plump convex Pillow Button with physical cushion press
+   - Torn lined yellow notepad paper with red margin and blue rules
+   - Warm luxury clay & leather device tablet surface
+   - ZERO EMOJIS.
+   ======================================================================= */
+
 /* Auth Pages Container */
 .auth-container {
   min-height: 100vh;
@@ -5,187 +16,394 @@
   align-items: center;
   justify-content: center;
   background: radial-gradient(ellipse at 50% 20%, #0f172a 0%, #090d16 65%, #020617 100%);
-  padding: 24px 16px;
+  padding: 32px 16px;
   position: relative;
   overflow: hidden;
 }
 
+/* 1. TACTILE DEVICE CARD CONTAINER (Tablet / Leather Device Chassis) */
 .auth-card {
   width: 100%;
   max-width: 460px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.55), 0 0 35px rgba(79, 70, 229, 0.12);
-  padding: 36px 32px;
   position: relative;
   z-index: 10;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
+.tactile-device-card {
+  /* Warm cream / oatmeal leather face */
+  background: linear-gradient(172deg, #f5efe6 0%, #ebe2d3 45%, #ded3c0 95%);
+  border-radius: 36px;
+  /* Dark phone/tablet outer bezel + physical rim bevels */
+  border: 7px solid #1c1917;
+  box-shadow: 
+    0 30px 70px -10px rgba(0, 0, 0, 0.75),
+    0 12px 24px -5px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -3px 6px rgba(110, 90, 70, 0.25);
+  padding: 36px 30px;
+}
+
+/* 2. TOP STITCHED LEATHER BADGE ("Auto-Brightness" Style Inspiration) */
 .auth-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
-.auth-brand {
+.stitched-leather-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Rich warm saddle tan leather gradient */
+  background: linear-gradient(180deg, #c98b50 0%, #b8783a 45%, #9d5d22 100%);
+  border-radius: 20px;
+  padding: 4px;
+  margin-bottom: 14px;
+  box-shadow: 
+    0 6px 14px -2px rgba(60, 35, 10, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 2px 3px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(60, 25, 5, 0.5);
+  cursor: default;
+}
+
+.stitch-inner {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  /* Realistic linen thread dashed stitching */
+  border: 2px dashed rgba(255, 242, 218, 0.85);
+  border-radius: 14px;
+  padding: 6px 18px;
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.brand-icon-box {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--primary), #818cf8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+.leather-piggy-icon {
+  color: #3b1d07;
+  filter: drop-shadow(0 1px 0 rgba(255, 240, 215, 0.4));
 }
 
-.brand-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.5px;
-}
-
-.brand-title span {
-  color: var(--primary);
+.leather-badge-text {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #3b1d07;
+  letter-spacing: 0.2px;
+  /* Stamped letterpress debossed shadow */
+  text-shadow: 
+    0 1px 1px rgba(255, 240, 215, 0.45),
+    0 -1px 1px rgba(50, 20, 5, 0.65);
 }
 
 .auth-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 6px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #34281c;
+  margin-bottom: 4px;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.85);
 }
 
 .auth-subtitle {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-size: 0.88rem;
+  color: #6b5744;
+  font-weight: 500;
 }
 
-.auth-footer {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+/* 3. RECESSED GROOVE INPUT SLOTS (Slider Track Style Inspiration) */
+.tactile-label {
+  color: #4a3b2c !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+  display: inline-block;
 }
 
-.auth-footer a {
-  font-weight: 600;
+.tactile-forgot-link {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8c5725;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: color 0.15s ease;
 }
 
-.auth-divider {
+.tactile-forgot-link:hover {
+  color: #5c320d;
+  text-decoration: underline;
+}
+
+/* Outer raised bezel plateau */
+.tactile-groove-outer {
+  background: linear-gradient(180deg, #e5dbcc 0%, #f1e9dd 100%);
+  border-radius: 20px;
+  padding: 4px;
+  box-shadow: 
+    0 2px 5px rgba(255, 255, 255, 0.95),
+    inset 0 1px 2px rgba(80, 60, 40, 0.15);
+  transition: all 0.2s ease;
+}
+
+.tactile-groove-outer:focus-within {
+  box-shadow: 
+    0 0 0 2px #c98b50,
+    0 4px 10px rgba(184, 120, 58, 0.25),
+    0 2px 5px rgba(255, 255, 255, 0.95);
+}
+
+/* Deep carved recessed slot */
+.tactile-groove-slot {
+  background: #dbcfbf;
+  border-radius: 16px;
+  min-height: 52px;
+  box-shadow: 
+    inset 0 3px 6px rgba(50, 35, 20, 0.35),
+    inset 0 1px 2px rgba(30, 20, 10, 0.45),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
-  margin: 20px 0;
-  color: var(--text-muted);
-  font-size: 0.8rem;
+  padding: 0 10px 0 8px;
+  gap: 10px;
 }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
+/* Brushed steel metal knob (Slider knob inspiration) */
+.brushed-metal-knob {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 45%, #94a3b8 80%, #64748b 100%);
+  box-shadow: 
+    0 3px 5px rgba(40, 30, 20, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1.5px #ffffff,
+    inset 0 -1px 1.5px rgba(0, 0, 0, 0.45);
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brushed-metal-btn {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.brushed-metal-btn:hover {
+  transform: scale(1.08);
+}
+
+.brushed-metal-btn:active {
+  transform: scale(0.94);
+  box-shadow: 
+    0 1px 2px rgba(40, 30, 20, 0.2),
+    inset 0 2px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* Input field inside groove */
+.tactile-input {
   flex: 1;
-  height: 1px;
-  background-color: var(--border-color);
+  border: none;
+  background: transparent;
+  color: #2b2216;
+  font-weight: 600;
+  font-size: 0.96rem;
+  outline: none;
+  padding: 10px 4px;
+  min-width: 0;
 }
 
-.auth-divider span {
-  padding: 0 12px;
+.tactile-input::placeholder {
+  color: #8f7d6a;
+  font-weight: 500;
 }
 
-/* Password Strength Indicator */
-.password-strength {
-  margin-top: 6px;
+/* 4. THE ICONIC PILLOW BUTTON ("Pillow Button" Style Inspiration) */
+.pillow-button {
+  width: 100%;
+  height: 54px;
+  border-radius: 24px;
+  /* Smooth convex pillow gradient */
+  background: linear-gradient(180deg, #fdfbf7 0%, #ede5d7 42%, #ddd2bf 85%, #cfc3ae 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 10px 22px -3px rgba(60, 45, 30, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.12),
+    inset 0 2.5px 4px rgba(255, 255, 255, 1),
+    inset 0 -3px 5px rgba(110, 85, 60, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #382c1e;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  /* Letterpress debossed text shadow */
+  text-shadow: 
+    0 1px 1px rgba(255, 255, 255, 0.95),
+    0 -1px 1px rgba(90, 65, 45, 0.35);
+  cursor: pointer;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+.pillow-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 14px 26px -3px rgba(60, 45, 30, 0.45),
+    0 5px 8px rgba(0, 0, 0, 0.15),
+    inset 0 2.5px 4px #ffffff,
+    inset 0 -3px 5px rgba(110, 85, 60, 0.35);
+}
+
+.pillow-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 
+    0 3px 8px rgba(60, 45, 30, 0.3),
+    inset 0 3px 6px rgba(60, 45, 30, 0.3),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.7);
+}
+
+.pillow-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pillow-button-arrow {
+  color: #382c1e;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8));
+}
+
+/* 5. TORN LINED NOTEPAD PAPER ("Notes" Style Inspiration) */
+.torn-notes-paper {
+  margin-top: 24px;
+  position: relative;
+  /* Canary yellow paper tone */
+  background-color: #fef8cd;
+  /* Red vertical left margin line + Blue horizontal ruled lines */
+  background-image: 
+    linear-gradient(90deg, transparent 44px, #fca5a5 44px, #fca5a5 46px, transparent 46px),
+    repeating-linear-gradient(transparent, transparent 23px, #bae6fd 23px, #bae6fd 24px);
+  /* Realistic torn perforated sawtooth top edge */
+  clip-path: polygon(
+    0% 6px, 2% 0px, 4% 6px, 6% 0px, 8% 6px, 10% 0px, 12% 6px, 14% 0px, 16% 6px, 18% 0px,
+    20% 6px, 22% 0px, 24% 6px, 26% 0px, 28% 6px, 30% 0px, 32% 6px, 34% 0px, 36% 6px, 38% 0px,
+    40% 6px, 42% 0px, 44% 6px, 46% 0px, 48% 6px, 50% 0px, 52% 6px, 54% 0px, 56% 6px, 58% 0px,
+    60% 6px, 62% 0px, 64% 6px, 66% 0px, 68% 6px, 70% 0px, 72% 6px, 74% 0px, 76% 6px, 78% 0px,
+    80% 6px, 82% 0px, 84% 6px, 86% 0px, 88% 6px, 90% 0px, 92% 6px, 94% 0px, 96% 6px, 98% 0px,
+    100% 6px, 100% 100%, 0% 100%
+  );
+  border-radius: 0 0 10px 10px;
+  box-shadow: 
+    0 8px 18px -2px rgba(60, 45, 30, 0.28),
+    0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: rotate(-0.8deg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.torn-notes-paper:hover {
+  transform: rotate(0deg) scale(1.01);
+  box-shadow: 
+    0 12px 24px -2px rgba(60, 45, 30, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.12);
+}
+
+.notes-paper-content {
+  padding: 18px 16px 14px 16px;
+}
+
+.notes-paper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-left: 36px; /* Offset past red margin */
+}
+
+.notes-paper-title {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #2e261e;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.notes-fill-btn {
+  background: linear-gradient(180deg, #fdfbf7 0%, #eee6d8 60%, #ded2bf 100%);
+  border: 1px solid rgba(140, 110, 80, 0.35);
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #3b2c1d;
+  box-shadow: 
+    0 2px 5px rgba(60, 45, 30, 0.2),
+    inset 0 1px 2px #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.notes-fill-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(60, 45, 30, 0.28);
+}
+
+.notes-fill-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 3px rgba(60, 45, 30, 0.25);
+}
+
+.notes-paper-body {
+  padding-left: 36px; /* Offset past red margin */
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.strength-bar-track {
-  height: 4px;
-  background-color: var(--border-color);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-  display: flex;
-}
-
-.strength-bar-fill {
-  height: 100%;
-  transition: width 0.3s ease, background-color 0.3s ease;
-}
-
-.strength-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.strength-meta span.score-text {
+.notes-line {
+  font-size: 0.82rem;
+  color: #2b2216;
   font-weight: 600;
+  line-height: 24px; /* Matches ruled line height */
 }
 
-/* OTP Input Boxes */
-.otp-inputs-grid {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin: 24px 0;
-}
-
-.otp-box {
-  width: 48px;
-  height: 54px;
-  text-align: center;
-  font-size: 1.5rem;
+.notes-tag {
+  color: #78350f;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background-color: var(--bg-card);
-  transition: all var(--transition-fast);
+  margin-right: 4px;
 }
 
-.otp-box:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
-}
-
-.otp-resend {
+/* 6. TACTILE FOOTER */
+.tactile-footer {
+  margin-top: 20px;
   text-align: center;
-  font-size: 0.875rem;
-  margin-top: 16px;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  color: #614e3b;
+  font-weight: 500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-.demo-credentials-pill {
-  margin-top: 18px;
-  background-color: var(--primary-light);
-  border: 1px dashed var(--primary);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  color: var(--primary-dark);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.demo-credentials-pill button {
-  font-size: 0.75rem;
+.tactile-footer a {
+  color: #8c5725;
   font-weight: 700;
-  color: var(--primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: color 0.15s ease;
+}
+
+.tactile-footer a:hover {
+  color: #5c320d;
   text-decoration: underline;
 }
 
+/* Generic alert overrides for tactile card */
+.auth-card .alert-box {
+  margin-bottom: 16px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
