@@ -16,6 +16,8 @@ export function Header() {
         return 'Daily Expenses';
       case '/reports':
         return 'Budget Analytics & Reports';
+      case '/savings':
+        return 'Accumulated Savings Vault';
       case '/history':
         return 'Monthly History';
       case '/settings':

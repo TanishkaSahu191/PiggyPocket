@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   History as HistoryIcon,
   Calendar,
@@ -13,15 +14,23 @@ import {
   X,
   FileText,
   IndianRupee,
-  Tag
+  Tag,
+  ShieldCheck,
+  TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { useBudget, EXPENSE_CATEGORIES } from '../context/BudgetContext';
 import { storageService, formatMonthName } from '../services/storage';
+import { analyticsService } from '../services/analyticsService';
 
 export default function History() {
-  const { addExpense, activeMonth } = useBudget();
+  const { addExpense, activeMonth, activeRecord, loadThreeMonthDemo } = useBudget();
   const [monthsList, setMonthsList] = useState([]);
   const [selectedMonthRecord, setSelectedMonthRecord] = useState(null);
+
+  const accumulatedData = useMemo(() => {
+    return analyticsService.calculateAccumulatedSavings(monthsList, activeRecord);
+  }, [monthsList, activeRecord]);
 
   // Late expense modal state
   const [isLateModalOpen, setIsLateModalOpen] = useState(false);
@@ -85,13 +94,120 @@ export default function History() {
 
   return (
     <div>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
-          Monthly History
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
-          Archive of all past and current months. Nothing is ever deleted when a month ends.
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
+            Monthly History & Savings
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+            Archive of all past and current months, lifetime accumulated savings, and individual cycle records.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={loadThreeMonthDemo}
+            className="btn btn-secondary"
+            style={{ fontSize: '0.85rem', padding: '6px 14px' }}
+          >
+            <Sparkles size={15} />
+            <span>Load 3-Month Demo</span>
+          </button>
+          <Link
+            to="/savings"
+            className="btn btn-primary"
+            style={{ fontSize: '0.85rem', padding: '6px 14px', textDecoration: 'none' }}
+          >
+            <PiggyBank size={15} />
+            <span>Open Savings Vault</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* DEDICATED SECTION: ACCUMULATED SAVINGS VAULT BANNER */}
+      <div
+        className="card"
+        style={{
+          background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
+          color: '#ffffff',
+          borderRadius: '14px',
+          padding: '24px',
+          marginBottom: '28px',
+          boxShadow: '0 8px 20px -4px rgba(6, 78, 59, 0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.5px', color: '#a7f3d0' }}>
+              <PiggyBank size={18} />
+              <span>LIFETIME ACCUMULATED SAVINGS</span>
+            </div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, marginTop: '6px', letterSpacing: '-0.5px' }}>
+              INR {accumulatedData.totalAccumulatedSavings}
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#d1fae5' }}>
+              Total preserved across {accumulatedData.monthsCount} recorded monthly cycle{accumulatedData.monthsCount !== 1 ? 's' : ''}.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+              }}
+            >
+              <ShieldCheck size={14} />
+              <span>{accumulatedData.protectionRate}% Goal Protection</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#a7f3d0' }}>
+              Target: INR {accumulatedData.totalSavingsGoal}
+            </span>
+          </div>
+        </div>
+
+        {/* Monthly Savings Badges Strip */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            overflowX: 'auto',
+            paddingTop: '16px',
+            marginTop: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          }}
+        >
+          {accumulatedData.months.map((m) => (
+            <div
+              key={`badge-${m.month}`}
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                padding: '8px 14px',
+                minWidth: '140px',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: '0.72rem', color: '#a7f3d0', fontWeight: 600 }}>
+                {formatMonthName(m.month)}
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, marginTop: '2px' }}>
+                INR {m.actualSavings}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#d1fae5', marginTop: '2px' }}>
+                Total: INR {m.cumulativeTotal}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {monthsList.length === 0 ? (

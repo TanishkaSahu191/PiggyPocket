@@ -176,7 +176,61 @@ describe('Analytics Service Unit Tests', () => {
     });
   });
 
-  describe('7. Verification of Guidelines Compliance', () => {
+  describe('7. Accumulated Savings & Monthly Performance Analysis', () => {
+    it('handles empty months input gracefully', () => {
+      const result = analyticsService.calculateAccumulatedSavings([], null);
+      expect(result.totalAccumulatedSavings).toBe(0);
+      expect(result.totalSavingsGoal).toBe(0);
+      expect(result.monthsCount).toBe(0);
+      expect(result.months).toEqual([]);
+      expect(result.chartData).toEqual([]);
+    });
+
+    it('calculates accumulated savings and running totals across multiple months', () => {
+      const records = [
+        {
+          month: '2026-09',
+          pocketMoney: 2500,
+          savingsGoal: 1000,
+          calculation: { adjustedProjectedSavings: 1000, cumulativeSavingsDeductions: 0 },
+        },
+        {
+          month: '2026-10',
+          pocketMoney: 3000,
+          savingsGoal: 1200,
+          calculation: { adjustedProjectedSavings: 1100, cumulativeSavingsDeductions: 100 },
+        },
+      ];
+
+      const activeRecord = {
+        month: '2026-11',
+        pocketMoney: 2500,
+        savingsGoal: 1000,
+        calculation: { adjustedProjectedSavings: 1000, cumulativeSavingsDeductions: 0 },
+      };
+
+      const result = analyticsService.calculateAccumulatedSavings(records, activeRecord);
+
+      expect(result.monthsCount).toBe(3);
+      expect(result.totalAccumulatedSavings).toBe(3100); // 1000 + 1100 + 1000
+      expect(result.totalSavingsGoal).toBe(3200); // 1000 + 1200 + 1000
+      expect(result.totalDeductions).toBe(100);
+      expect(result.averageMonthlySavings).toBe(1033);
+      expect(result.protectionRate).toBe(97); // 3100 / 3200 ~ 97%
+
+      // Verify running cumulative totals
+      expect(result.months[0].cumulativeTotal).toBe(1000);
+      expect(result.months[1].cumulativeTotal).toBe(2100);
+      expect(result.months[2].cumulativeTotal).toBe(3100);
+
+      // Verify month labels for chart
+      expect(result.chartData.length).toBe(3);
+      expect(result.chartData[0].accumulatedSavings).toBe(1000);
+      expect(result.chartData[2].accumulatedSavings).toBe(3100);
+    });
+  });
+
+  describe('8. Verification of Guidelines Compliance', () => {
     it('verifies ZERO emojis in generated insights or alert messages', () => {
       const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
 

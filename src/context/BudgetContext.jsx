@@ -250,6 +250,71 @@ export function BudgetProvider({ children }) {
     setActiveRecord(saved);
   }, [activeMonth]);
 
+  // Helper to load 3 months of realistic history for testing accumulated savings
+  const loadThreeMonthDemo = useCallback(() => {
+    const prev1 = getPreviousMonthString(activeMonth);
+    const prev2 = getPreviousMonthString(prev1);
+
+    // Month 1 (2 months ago)
+    storageService.saveMonthRecord({
+      month: prev2,
+      pocketMoney: 2500,
+      dateReceived: 1,
+      savingsGoal: 1000,
+      dailyLimit: 50,
+      isCustomLimit: false,
+      startingReserve: 0,
+      carryForwardDecision: 'carried',
+      isConfigured: true,
+      transactions: [
+        { id: `demo_${prev2}_1`, date: `${prev2}-02`, amount: 40, category: 'Food', note: 'Campus lunch' },
+        { id: `demo_${prev2}_2`, date: `${prev2}-08`, amount: 30, category: 'Travel', note: 'Bus pass' },
+        { id: `demo_${prev2}_3`, date: `${prev2}-15`, amount: 120, category: 'Study', note: 'Notebooks' },
+      ],
+    });
+
+    // Month 2 (1 month ago)
+    storageService.saveMonthRecord({
+      month: prev1,
+      pocketMoney: 3000,
+      dateReceived: 1,
+      savingsGoal: 1200,
+      dailyLimit: 60,
+      isCustomLimit: false,
+      startingReserve: 150,
+      carryForwardDecision: 'carried',
+      isConfigured: true,
+      transactions: [
+        { id: `demo_${prev1}_1`, date: `${prev1}-05`, amount: 50, category: 'Food', note: 'Snacks' },
+        { id: `demo_${prev1}_2`, date: `${prev1}-12`, amount: 100, category: 'Shopping', note: 'Stationery' },
+        { id: `demo_${prev1}_3`, date: `${prev1}-20`, amount: 45, category: 'Travel', note: 'Metro card' },
+      ],
+    });
+
+    // Current Month
+    const currentRec = activeRecord || storageService.getMonthRecord(activeMonth) || {
+      month: activeMonth,
+      pocketMoney: 2500,
+      dateReceived: 1,
+      savingsGoal: 1000,
+      dailyLimit: 50,
+      isCustomLimit: false,
+      startingReserve: 100,
+      transactions: [],
+    };
+
+    const savedCurrent = storageService.saveMonthRecord({
+      ...currentRec,
+      isConfigured: true,
+      transactions: currentRec.transactions?.length > 0 ? currentRec.transactions : [
+        { id: `demo_${activeMonth}_1`, date: `${activeMonth}-02`, amount: 35, category: 'Food', note: 'Canteen meal' },
+        { id: `demo_${activeMonth}_2`, date: `${activeMonth}-04`, amount: 20, category: 'Travel', note: 'Bus ticket' },
+      ],
+    });
+
+    setActiveRecord(savedCurrent);
+  }, [activeMonth, activeRecord]);
+
   // Clear current active month's transactions
   const clearTransactions = useCallback(() => {
     if (!activeRecord) return;
@@ -283,6 +348,7 @@ export function BudgetProvider({ children }) {
     deleteExpense,
     clearTransactions,
     loadFourDayExample,
+    loadThreeMonthDemo,
     spendingBudget,
     defaultDailyLimit,
     effectiveDailyLimit,

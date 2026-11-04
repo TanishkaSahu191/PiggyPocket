@@ -18,6 +18,7 @@ import {
   Shield,
   Layers,
   SlidersHorizontal,
+  PiggyBank,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -214,6 +215,15 @@ export default function Reports() {
               )}
             </select>
           </div>
+
+          <Link
+            to="/savings"
+            className="btn btn-secondary"
+            style={{ height: '38px', padding: '0 14px', fontSize: '0.88rem', textDecoration: 'none' }}
+          >
+            <PiggyBank size={16} />
+            <span>Savings Vault</span>
+          </Link>
 
           <button
             type="button"

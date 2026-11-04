@@ -19,6 +19,7 @@ export function Sidebar() {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/expenses', label: 'Expenses', icon: Receipt },
     { to: '/reports', label: 'Reports', icon: BarChart3 },
+    { to: '/savings', label: 'Savings Vault', icon: PiggyBank },
     { to: '/history', label: 'Monthly History', icon: History },
     { to: '/setup', label: 'Budget Setup', icon: SlidersHorizontal },
     { to: '/settings', label: 'Settings', icon: Settings },

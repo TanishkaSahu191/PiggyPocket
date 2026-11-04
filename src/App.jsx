@@ -17,6 +17,7 @@ import Dashboard from './pages/Dashboard';
 import Setup from './pages/Setup';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
+import Savings from './pages/Savings';
 import History from './pages/History';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/setup" element={<Setup />} />
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/savings" element={<Savings />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />

@@ -413,5 +413,104 @@ export const analyticsService = {
       canCelebrate: false,
     };
   },
+
+  /**
+   * 8. Accumulated Savings & Monthly Savings Analysis
+   * Calculates lifetime accumulated savings and chronological month-by-month savings.
+   *
+   * @param {Array<object>} monthRecords - All saved month records.
+   * @param {object} [activeRecord] - Active month record in memory for fresh state.
+   * @returns {{
+   *   totalAccumulatedSavings: number,
+   *   totalSavingsGoal: number,
+   *   totalDeductions: number,
+   *   averageMonthlySavings: number,
+   *   protectionRate: number,
+   *   monthsCount: number,
+   *   months: Array<object>,
+   *   chartData: Array<object>
+   * }}
+   */
+  calculateAccumulatedSavings(monthRecords = [], activeRecord = null) {
+    const recordsMap = new Map();
+
+    // Add stored records
+    for (const rec of monthRecords) {
+      if (rec && rec.month) {
+        recordsMap.set(rec.month, rec);
+      }
+    }
+
+    // Merge active record
+    if (activeRecord && activeRecord.month) {
+      recordsMap.set(activeRecord.month, activeRecord);
+    }
+
+    // Sort chronologically (earliest month first)
+    const sortedRecords = Array.from(recordsMap.values()).sort((a, b) => (a.month < b.month ? -1 : 1));
+
+    let runningTotal = 0;
+    let totalSavingsGoal = 0;
+    let totalDeductions = 0;
+
+    const months = sortedRecords.map((rec) => {
+      const calc = rec.calculation || {};
+      const pocketMoney = Math.max(0, Number(rec.pocketMoney ?? 2500));
+      const savingsGoal = Math.max(0, Number(rec.savingsGoal ?? 1000));
+      const savingsDeductions = Math.max(0, Number(calc.cumulativeSavingsDeductions ?? 0));
+      const actualSavings = Math.max(0, Number(calc.adjustedProjectedSavings ?? (savingsGoal - savingsDeductions)));
+      const isAchieved = savingsDeductions === 0 && actualSavings >= savingsGoal;
+      const savingsRate = pocketMoney > 0 ? Number(((actualSavings / pocketMoney) * 100).toFixed(1)) : 0;
+
+      runningTotal += actualSavings;
+      totalSavingsGoal += savingsGoal;
+      totalDeductions += savingsDeductions;
+
+      return {
+        month: rec.month,
+        pocketMoney,
+        savingsGoal,
+        actualSavings,
+        savingsDeductions,
+        savingsRate,
+        isAchieved,
+        cumulativeTotal: runningTotal,
+        isCurrent: Boolean(activeRecord && rec.month === activeRecord.month),
+      };
+    });
+
+    const totalAccumulatedSavings = runningTotal;
+    const monthsCount = months.length;
+    const averageMonthlySavings = monthsCount > 0 ? Math.round(totalAccumulatedSavings / monthsCount) : 0;
+    const protectionRate = totalSavingsGoal > 0
+      ? Math.min(100, Math.round((totalAccumulatedSavings / totalSavingsGoal) * 100))
+      : 100;
+
+    // Prepare chart data for Recharts
+    const chartData = months.map((m) => {
+      const [year, monthNum] = m.month.split('-');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthLabel = monthNum ? `${monthNames[parseInt(monthNum, 10) - 1]} '${year.slice(2)}` : m.month;
+
+      return {
+        month: m.month,
+        monthLabel,
+        monthlySavings: m.actualSavings,
+        savingsGoal: m.savingsGoal,
+        accumulatedSavings: m.cumulativeTotal,
+      };
+    });
+
+    return {
+      totalAccumulatedSavings,
+      totalSavingsGoal,
+      totalDeductions,
+      averageMonthlySavings,
+      protectionRate,
+      monthsCount,
+      months,
+      chartData,
+    };
+  },
 };
 

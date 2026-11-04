@@ -169,8 +169,13 @@ export default function Dashboard() {
 
           {/* Original Savings Goal */}
           <div className="card" style={{ padding: '18px 20px' }}>
-            <div style={{ fontSize: '0.78rem', color: 'var(--savings-primary)', fontWeight: 600, textTransform: 'uppercase' }}>
-              Original Savings Goal
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--savings-primary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Original Savings Goal
+              </div>
+              <Link to="/savings" style={{ fontSize: '0.75rem', color: 'var(--savings-primary)', fontWeight: 700, textDecoration: 'none' }}>
+                Vault &rarr;
+              </Link>
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--savings-primary)', marginTop: '6px' }}>
               INR {budgetConfig.savingsGoal}
