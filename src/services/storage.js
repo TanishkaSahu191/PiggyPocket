@@ -1,9 +1,7 @@
 /**
- * STORAGE SERVICE LAYER - Phase 4
+ * STORAGE SERVICE LAYER
  *
- * Provides a clean storage abstraction on top of localStorage.
- * Can be swapped for a REST/PostgreSQL backend in Stage 2 / Phase 5
- * without altering UI component signatures.
+ * Provides a clean storage abstraction on top of localStorage with API sync.
  *
  * HARD RULES:
  * - One separate record per month (e.g. "2026-11").

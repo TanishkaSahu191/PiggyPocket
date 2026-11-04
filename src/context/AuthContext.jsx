@@ -1,11 +1,8 @@
 /**
- * =======================================================================
- * TEMPORARY MOCK AUTH CONTEXT - Phase 1 Only.
+ * AUTH CONTEXT & SESSION MANAGEMENT
  *
- * This context provides mock authentication state & actions for Phase 1.
- * Real authentication with JWT, PostgreSQL, Express backend, and
- * real OTP handling will replace this in Stage 2 / Phase 5.
- * =======================================================================
+ * Provides authentication state and actions for user login, signup,
+ * and OTP verification. Integrates with authService and token storage.
  */
 
 import React, { createContext, useState, useEffect, useCallback } from 'react';
@@ -64,8 +61,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * Verify 6-digit OTP
-   * TODO: Real OTP verification endpoint will be connected in Phase 5.
+   * Verify 6-digit OTP via auth service
    */
   const verifyOtp = useCallback(async (otpCode) => {
     const emailToVerify = pendingOtpEmail || authService.getPendingOtpInfo()?.email;

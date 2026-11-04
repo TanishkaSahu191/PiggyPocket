@@ -1,5 +1,5 @@
 /**
- * BUDGET CONTEXT & STATE MANAGEMENT - Phase 4
+ * BUDGET CONTEXT & REACTIVE STATE MANAGEMENT
  *
  * Integrated with the Storage Service Layer (/src/services/storage.js)
  * and the Core Finance Engine (/src/core/financeEngine.js).

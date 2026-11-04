@@ -5,7 +5,7 @@ import { resetMemoryDb, query } from '../config/db.js';
 import { schedulerService } from './schedulerService.js';
 import { renderDailySummaryHtml } from '../templates/dailySummaryEmail.js';
 
-describe('Phase 6: Daily Email Summaries & Scheduler Tests', () => {
+describe('Daily Email Summaries & Scheduler Tests', () => {
   beforeEach(() => {
     resetMemoryDb();
     vi.restoreAllMocks();

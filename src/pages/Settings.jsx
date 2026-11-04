@@ -261,7 +261,7 @@ export default function Settings() {
 
         </div>
 
-        {/* PHASE 6: DAILY EMAIL SUMMARIES SETTINGS CARD */}
+        {/* DAILY EMAIL SUMMARIES SETTINGS CARD */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>

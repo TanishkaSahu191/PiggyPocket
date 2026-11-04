@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { analyticsService } from './analyticsService';
 
-describe('Phase 7: Analytics Service Unit Tests', () => {
+describe('Analytics Service Unit Tests', () => {
   describe('1. Category-Wise Spending Analysis', () => {
     it('aggregates transactions by category and calculates percentages', () => {
       const transactions = [
@@ -203,7 +203,7 @@ describe('Phase 7: Analytics Service Unit Tests', () => {
       expect(emojiRegex.test(celeb.message)).toBe(false);
     });
 
-    it('verifies ZERO emojis in Phase 7 source code files', () => {
+    it('verifies ZERO emojis in analytics and reports source code files', () => {
       const fs = require('fs');
       const path = require('path');
       const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1FA70}-\u{1FAFF}]/u;

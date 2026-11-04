@@ -1,5 +1,5 @@
 /**
- * ANALYTICS SERVICE - Phase 7: Reports and Analytics
+ * ANALYTICS & REPORTING SERVICE
  *
  * Standalone calculation service transforming shared financeEngine data
  * into visualization-ready structures, comparative metrics, and actionable alerts.

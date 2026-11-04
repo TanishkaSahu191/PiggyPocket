@@ -105,7 +105,7 @@ export default function OtpVerification() {
     }
   };
 
-  const fillMockOtp = () => {
+  const fillDemoOtp = () => {
     setOtpDigits(['1', '2', '3', '4', '5', '6']);
     setError('');
     setResendNotice('');
@@ -191,7 +191,7 @@ export default function OtpVerification() {
               <button
                 type="button"
                 className="notes-fill-btn"
-                onClick={fillMockOtp}
+                onClick={fillDemoOtp}
               >
                 Auto-fill 123456
               </button>
