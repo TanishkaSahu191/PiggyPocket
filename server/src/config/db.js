@@ -33,6 +33,7 @@ const memoryDb = {
   monthly_budgets: [],
   transactions: [],
   user_settings: [],
+  email_logs: [],
 };
 
 if (connectionString && connectionString.trim() !== '') {
@@ -82,8 +83,8 @@ function executeMemoryQuery(text, params = []) {
   const cleanSql = text.trim();
   const lower = cleanSql.toLowerCase();
 
-  // 1. SELECT users
-  if (lower.startsWith('select') && lower.includes('from users')) {
+  // 1. SELECT users (pure users table queries)
+  if (lower.startsWith('select') && lower.includes('from users') && !lower.includes('join user_settings')) {
     if (lower.includes('where email =') || lower.includes('where lower(email) =')) {
       const email = String(params[0] || '').toLowerCase();
       const match = memoryDb.users.filter((u) => u.email.toLowerCase() === email);
@@ -252,6 +253,95 @@ function executeMemoryQuery(text, params = []) {
     return { rows: [], rowCount: before - memoryDb.transactions.length };
   }
 
+  // 7. User Settings
+  if (lower.includes('from user_settings') || (lower.includes('from users u') && lower.includes('join user_settings'))) {
+    if (lower.includes('where u.id =') || lower.includes('where user_id =')) {
+      const userId = params[0];
+      const user = memoryDb.users.find((u) => u.id === userId) || {};
+      const s = memoryDb.user_settings.find((item) => item.user_id === userId) || {};
+      return {
+        rows: [{
+          id: userId,
+          email: user.email || 'user@example.com',
+          full_name: user.full_name || 'Student',
+          daily_email_enabled: s.daily_email_enabled ?? true,
+          delivery_hour: s.delivery_hour ?? 22,
+          time_zone: s.time_zone ?? 'Asia/Kolkata',
+          notification_email: s.notification_email || user.email || 'user@example.com',
+        }],
+        rowCount: 1,
+      };
+    }
+    // All users with settings for scheduler
+    const all = memoryDb.users.map((u) => {
+      const s = memoryDb.user_settings.find((item) => item.user_id === u.id) || {};
+      return {
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name,
+        daily_email_enabled: s.daily_email_enabled ?? true,
+        delivery_hour: s.delivery_hour ?? 22,
+        time_zone: s.time_zone ?? 'Asia/Kolkata',
+        notification_email: s.notification_email || u.email,
+      };
+    });
+    return { rows: all, rowCount: all.length };
+  }
+
+  if (lower.startsWith('insert into user_settings')) {
+    const userId = params[0];
+    const rec = {
+      user_id: userId,
+      daily_email_enabled: params[1] ?? true,
+      delivery_hour: Number(params[2] ?? 22),
+      time_zone: params[3] ?? 'Asia/Kolkata',
+      notification_email: params[4] || null,
+      updated_at: new Date().toISOString(),
+    };
+    const idx = memoryDb.user_settings.findIndex((s) => s.user_id === userId);
+    if (idx !== -1) {
+      memoryDb.user_settings[idx] = { ...memoryDb.user_settings[idx], ...rec };
+    } else {
+      memoryDb.user_settings.push(rec);
+    }
+    return { rows: [rec], rowCount: 1 };
+  }
+
+  // 8. Email Logs
+  if (lower.startsWith('select') && lower.includes('from email_logs')) {
+    const userId = params[0];
+    let list = memoryDb.email_logs.filter((l) => l.user_id === userId);
+    if (lower.includes('email_type = $2 and date_sent = $3')) {
+      const emailType = params[1];
+      const dateSent = params[2];
+      list = list.filter((l) => l.email_type === emailType && l.date_sent === dateSent && l.status === 'sent');
+    }
+    return { rows: list, rowCount: list.length };
+  }
+
+  if (lower.startsWith('insert into email_logs')) {
+    const rec = {
+      id: params[0],
+      user_id: params[1],
+      email_type: params[2],
+      recipient_email: params[3],
+      date_sent: params[4],
+      sent_at: new Date().toISOString(),
+      status: params[5] || 'sent',
+      retry_count: Number(params[6] || 0),
+      error_message: params[7] || null,
+    };
+    const existIdx = memoryDb.email_logs.findIndex(
+      (l) => l.user_id === rec.user_id && l.email_type === rec.email_type && l.date_sent === rec.date_sent
+    );
+    if (existIdx !== -1) {
+      memoryDb.email_logs[existIdx] = { ...memoryDb.email_logs[existIdx], ...rec };
+    } else {
+      memoryDb.email_logs.push(rec);
+    }
+    return { rows: [rec], rowCount: 1 };
+  }
+
   // Fallback generic empty
   return { rows: [], rowCount: 0 };
 }
@@ -262,5 +352,6 @@ export function resetMemoryDb() {
   memoryDb.monthly_budgets = [];
   memoryDb.transactions = [];
   memoryDb.user_settings = [];
+  memoryDb.email_logs = [];
 }
 

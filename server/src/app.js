@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
 import budgetRoutes from './routes/budgetRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Global 404 Route Handler
 app.use((req, res) => {
