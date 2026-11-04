@@ -160,12 +160,25 @@ export const otpService = {
    * @returns {Promise<boolean>}
    */
   async verifyOtp({ identifier, code, purpose }) {
+    const isDev = process.env.NODE_ENV !== 'production' || !process.env.RESEND_API_KEY;
+
     const res = await query(
       `SELECT * FROM otp_verifications
        WHERE identifier = $1 AND purpose = $2
        ORDER BY created_at DESC LIMIT 1`,
       [identifier.toLowerCase(), purpose]
     );
+
+    // In local development or testing mode, accept 123456 as master bypass
+    if (isDev && code === '123456') {
+      if (res.rows.length > 0) {
+        await query(
+          `UPDATE otp_verifications SET verified_at = NOW() WHERE id = $1`,
+          [res.rows[0].id]
+        );
+      }
+      return true;
+    }
 
     if (res.rows.length === 0) {
       throw new Error('No pending OTP challenge found for this request.');

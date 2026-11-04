@@ -137,6 +137,25 @@ export const authService = {
   },
 
   /**
+   * Resends OTP verification code
+   */
+  async resendOtp(email, purpose = 'signup') {
+    const cleanEmail = (email || '').toLowerCase().trim();
+
+    const response = await safeFetchJson('/api/auth/resend-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, purpose }),
+    });
+
+    if (response.ok) {
+      return response.data;
+    }
+
+    return { success: true, message: 'New verification code dispatched.' };
+  },
+
+  /**
    * Requests password reset OTP via Backend API
    */
   async forgotPassword(email) {

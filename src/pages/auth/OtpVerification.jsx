@@ -1,25 +1,18 @@
-/**
- * =======================================================================
- * OTP VERIFICATION SCREEN (PLACEHOLDER / MOCK)
- *
- * TODO: Real OTP verification via SMS/Email provider comes in Phase 5.
- * In Phase 1, mock OTP code is '123456'.
- * =======================================================================
- */
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, Info } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import FallingCoins3D from '../../components/common/FallingCoins3D';
 
 export default function OtpVerification() {
   const navigate = useNavigate();
-  const { verifyOtp, pendingOtpEmail } = useAuth();
+  const { verifyOtp, resendOtp, pendingOtpEmail } = useAuth();
 
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
+  const [resendNotice, setResendNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
 
   const inputRefs = useRef([]);
@@ -31,7 +24,7 @@ export default function OtpVerification() {
     }
   }, []);
 
-  // Simple countdown timer for mock resend
+  // Countdown timer for resend
   useEffect(() => {
     if (resendTimer > 0) {
       const timer = setTimeout(() => setResendTimer((t) => t - 1), 1000);
@@ -48,6 +41,7 @@ export default function OtpVerification() {
     newDigits[index] = value.slice(-1);
     setOtpDigits(newDigits);
     setError('');
+    setResendNotice('');
 
     // If character entered, jump to next input
     if (value && index < 5) {
@@ -69,6 +63,7 @@ export default function OtpVerification() {
       const digits = pasted.split('');
       setOtpDigits(digits);
       inputRefs.current[5]?.focus();
+      setError('');
     }
   };
 
@@ -77,65 +72,88 @@ export default function OtpVerification() {
     const fullOtp = otpDigits.join('');
 
     if (fullOtp.length < 6) {
-      setError('Please enter the full 6-digit OTP code');
+      setError('Please enter the full 6-digit OTP code.');
       return;
     }
 
     setIsSubmitting(true);
     setError('');
+    setResendNotice('');
 
     try {
-      // TODO: Real OTP verification endpoint will be connected in Phase 5.
       await verifyOtp(fullOtp);
       navigate('/setup', { replace: true });
     } catch (err) {
-      setError(err.message || 'Verification failed. Try entering 123456 for Phase 1 testing.');
+      setError(err.message || 'Invalid verification code. Please check and try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setError('');
+    setResendNotice('');
+    try {
+      await resendOtp();
+      setResendNotice('A new 6-digit verification code has been dispatched.');
+      setResendTimer(30);
+    } catch (err) {
+      setError(err.message || 'Failed to resend code. Please try again.');
+    } finally {
+      setIsResending(false);
     }
   };
 
   const fillMockOtp = () => {
     setOtpDigits(['1', '2', '3', '4', '5', '6']);
     setError('');
+    setResendNotice('');
+    if (inputRefs.current[5]) {
+      inputRefs.current[5].focus();
+    }
   };
 
   return (
     <div className="auth-container">
+      {/* 3D Money Falling Background */}
       <FallingCoins3D />
-      <div className="auth-card">
+
+      <div className="auth-card tactile-device-card">
+        {/* Top Stitched Leather Badge */}
         <div className="auth-header">
-          <div className="brand-icon-box" style={{ margin: '0 auto 12px auto' }}>
-            <ShieldCheck size={24} />
+          <div className="stitched-leather-badge">
+            <div className="stitch-inner">
+              <ShieldCheck size={20} className="leather-piggy-icon" />
+              <span className="leather-badge-text">Account Verification</span>
+            </div>
           </div>
           <h2 className="auth-title">Verify Your Account</h2>
           <p className="auth-subtitle">
             Enter the 6-digit code sent to{' '}
-            <strong>{pendingOtpEmail || 'your email / phone'}</strong>
+            <strong style={{ color: '#4a3b2c' }}>{pendingOtpEmail || 'your email'}</strong>
           </p>
         </div>
 
-        {/* Phase 1 Mock Notice */}
-        <div className="alert-box alert-info">
-          <Info size={18} style={{ flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <strong>Phase 1 Mock OTP:</strong> Enter <code>123456</code>.
-            <div style={{ fontSize: '0.78rem', marginTop: 2 }}>
-              {/* TODO: Real OTP SMS/Email provider integration comes in Phase 5 */}
-              (Real OTP verification via SMS/Email will be connected in Phase 5)
-            </div>
+        {/* Resend success notice */}
+        {resendNotice && (
+          <div className="alert-box alert-success" style={{ marginBottom: '16px' }}>
+            <CheckCircle2 size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{resendNotice}</span>
           </div>
-        </div>
+        )}
 
+        {/* Error message */}
         {error && (
-          <div className="alert-box alert-danger">
+          <div className="alert-box alert-danger" style={{ marginBottom: '16px' }}>
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="otp-inputs-grid" onPaste={handlePaste}>
+          {/* Tactile Recessed 6-digit OTP Input Grid */}
+          <div className="tactile-otp-grid" onPaste={handlePaste}>
             {otpDigits.map((digit, idx) => (
               <input
                 key={idx}
@@ -147,45 +165,69 @@ export default function OtpVerification() {
                 value={digit}
                 onChange={(e) => handleChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className="otp-box"
+                className="tactile-otp-box"
                 autoComplete="one-time-code"
               />
             ))}
           </div>
 
+          {/* Pillow Button */}
           <button
             type="submit"
-            className="btn btn-primary btn-full"
+            className="pillow-button"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Verifying...' : 'Verify & Continue'}
-            {!isSubmitting && <ArrowRight size={18} />}
+            <span>{isSubmitting ? 'Verifying...' : 'Verify & Continue'}</span>
+            {!isSubmitting && <ArrowRight size={19} className="pillow-button-arrow" />}
           </button>
         </form>
 
-        <div className="otp-resend">
-          {resendTimer > 0 ? (
-            <span>Resend code in <strong>{resendTimer}s</strong></span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setResendTimer(30)}
-              style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}
-            >
-              Resend OTP Code
-            </button>
-          )}
-          <span style={{ margin: '0 8px' }}>•</span>
-          <button
-            type="button"
-            onClick={fillMockOtp}
-            style={{ color: 'var(--wallet-primary)', fontWeight: 600, textDecoration: 'underline' }}
-          >
-            Auto-fill 123456
-          </button>
+        {/* Torn Lined Notepad Paper for Notes & Testing */}
+        <div className="torn-notes-paper" style={{ marginTop: '22px' }}>
+          <div className="notes-paper-tear-top"></div>
+          <div className="notes-paper-content">
+            <div className="notes-paper-header">
+              <span className="notes-paper-title">Notes</span>
+              <button
+                type="button"
+                className="notes-fill-btn"
+                onClick={fillMockOtp}
+              >
+                Auto-fill 123456
+              </button>
+            </div>
+            <div className="notes-paper-body">
+              <div className="notes-line">
+                <span className="notes-tag">Verification:</span> Check your inbox or use code <strong>123456</strong>
+              </div>
+              <div className="notes-line" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="notes-tag">Resend:</span>
+                {resendTimer > 0 ? (
+                  <span>Available in <strong>{resendTimer}s</strong></span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isResending}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      color: '#8c5725',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {isResending ? 'Sending...' : 'Request Fresh Code'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="auth-footer" style={{ marginTop: '24px' }}>
+        <div className="auth-footer tactile-footer">
           <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <ArrowLeft size={16} />
             <span>Cancel and back to Login</span>
@@ -195,4 +237,3 @@ export default function OtpVerification() {
     </div>
   );
 }
-

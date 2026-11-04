@@ -155,37 +155,73 @@ export const authController = {
         [email.toLowerCase().trim()]
       );
 
-      if (userRes.rows.length > 0) {
-        const user = userRes.rows[0];
+      let user = userRes.rows[0];
+      if (!user) {
+        const userId = 'usr_' + Date.now();
+        user = {
+          id: userId,
+          full_name: email.split('@')[0],
+          email: email.toLowerCase().trim(),
+          phone: '9876543210',
+          is_email_verified: true,
+        };
+        await query(
+          `INSERT INTO users (id, full_name, email, phone, password_hash, is_email_verified)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, user.full_name, user.email, user.phone, 'demo_hash', true]
+        );
+      } else {
         await query(
           `UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1`,
           [user.id]
         );
-
-        const { accessToken, refreshToken } = tokenService.generateTokens(user);
-
-        res.cookie('pp_refresh_token', refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-
-        return res.json({
-          success: true,
-          accessToken,
-          user: {
-            id: user.id,
-            fullName: user.full_name,
-            email: user.email,
-            phone: user.phone,
-          },
-        });
       }
 
-      return res.json({ success: true, message: 'OTP verified successfully.' });
+      const { accessToken, refreshToken } = tokenService.generateTokens(user);
+
+      res.cookie('pp_refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
+        success: true,
+        accessToken,
+        user: {
+          id: user.id,
+          fullName: user.full_name,
+          email: user.email,
+          phone: user.phone,
+        },
+      });
     } catch (err) {
       return res.status(400).json({ success: false, error: err.message });
+    }
+  },
+
+  /**
+   * Resend OTP verification code
+   */
+  async resendOtp(req, res) {
+    try {
+      const { email, purpose = 'signup' } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, error: 'Email is required.' });
+      }
+      await otpService.createAndSendOtp({
+        identifier: email,
+        channel: 'email',
+        purpose,
+      });
+      return res.json({
+        success: true,
+        message: 'New verification code has been dispatched.',
+      });
+    } catch (err) {
+      console.error('resendOtp error:', err);
+      return res.status(500).json({ success: false, error: err.message || 'Failed to resend code.' });
     }
   },
 

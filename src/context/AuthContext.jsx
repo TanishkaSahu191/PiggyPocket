@@ -79,6 +79,14 @@ export function AuthProvider({ children }) {
   }, [pendingOtpEmail]);
 
   /**
+   * Resend OTP verification code
+   */
+  const resendOtp = useCallback(async (email) => {
+    const emailToResend = email || pendingOtpEmail || authService.getPendingOtpInfo()?.email;
+    return await authService.resendOtp(emailToResend);
+  }, [pendingOtpEmail]);
+
+  /**
    * Log out active user
    */
   const logout = useCallback(async () => {
@@ -96,6 +104,7 @@ export function AuthProvider({ children }) {
     signup,
     forgotPassword,
     verifyOtp,
+    resendOtp,
     logout
   };
 
