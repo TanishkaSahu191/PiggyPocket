@@ -28,3 +28,4 @@ export function fireCelebrationConfetti() {
     console.warn('Confetti trigger skipped:', err);
   }
 }
+

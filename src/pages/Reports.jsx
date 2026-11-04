@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   PieChart as PieChartIcon,
   TrendingUp,
@@ -16,6 +17,7 @@ import {
   Printer,
   Shield,
   Layers,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -34,7 +36,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-import { useBudget } from '../context/BudgetContext';
+import { useBudget, getTodayString } from '../context/BudgetContext';
 import { storageService, formatMonthName, getPreviousMonthString } from '../services/storage';
 import { analyticsService, CATEGORY_COLORS } from '../services/analyticsService';
 import { fireCelebrationConfetti } from '../components/common/CelebrationConfetti';
@@ -43,28 +45,41 @@ export default function Reports() {
   const {
     activeMonth,
     activeRecord,
-    todayString,
-    perDayBreakdown,
-    dailyLimit,
-    currentReserveBalance,
-    adjustedProjectedSavings,
-    savingsGoal,
-    cumulativeSavingsDeductions,
-    totalSpent,
-    initialSpendingBudget,
-    pocketMoney,
-    savingsGoalAchieved,
-    isConfigured,
+    budgetConfig,
+    effectiveDailyLimit,
+    monthCalculation,
+    loadFourDayExample,
   } = useBudget();
+
+  const todayString = getTodayString();
+  const dailyLimit = effectiveDailyLimit || 50;
+  const perDayBreakdown = monthCalculation?.perDayBreakdown || [];
+  const currentReserveBalance = monthCalculation?.currentReserveBalance || 0;
+  const adjustedProjectedSavings = monthCalculation?.adjustedProjectedSavings || 0;
+  const savingsGoal = budgetConfig?.savingsGoal || 1000;
+  const cumulativeSavingsDeductions = monthCalculation?.cumulativeSavingsDeductions || 0;
+  const totalSpent = monthCalculation?.totalSpent || 0;
+  const pocketMoney = budgetConfig?.pocketMoney || 2500;
+  const isConfigured = budgetConfig?.isConfigured;
 
   // All recorded months for selection & comparison
   const allMonths = useMemo(() => {
     const list = storageService.getAllMonthRecords();
-    return list.map((r) => r.month);
+    const months = list.map((r) => r.month);
+    if (activeMonth && !months.includes(activeMonth)) {
+      months.unshift(activeMonth);
+    }
+    return months.length > 0 ? months : [activeMonth];
   }, [activeMonth, activeRecord]);
 
   // Selected month for primary reports view
   const [selectedMonth, setSelectedMonth] = useState(activeMonth);
+
+  useEffect(() => {
+    if (activeMonth) {
+      setSelectedMonth(activeMonth);
+    }
+  }, [activeMonth]);
 
   // Month-over-month comparison selection
   const previousMonthDefault = getPreviousMonthString(activeMonth);
@@ -81,22 +96,23 @@ export default function Reports() {
     if (selectedMonth === activeMonth && activeRecord) {
       return activeRecord;
     }
-    return storageService.getMonthRecord(selectedMonth);
+    const stored = storageService.getMonthRecord(selectedMonth);
+    return stored || activeRecord;
   }, [selectedMonth, activeMonth, activeRecord]);
 
-  const targetCalc = targetRecord?.calculation || {};
+  const targetCalc = targetRecord?.calculation || monthCalculation || {};
   const targetTransactions = targetRecord?.transactions || [];
-  const targetBreakdown = targetCalc?.perDayBreakdown || [];
+  const targetBreakdown = targetCalc?.perDayBreakdown || perDayBreakdown || [];
 
   // 1. Category Spending Analysis
   const categoryData = useMemo(() => {
-    return analyticsService.calculateCategorySpending(targetTransactions);
+    return analyticsService.calculateCategorySpending(targetTransactions || []);
   }, [targetTransactions]);
 
   // 2. Daily Spending Trend Analysis
   const dailyTrendData = useMemo(() => {
     return analyticsService.prepareDailySpendingTrend(
-      targetBreakdown,
+      targetBreakdown || [],
       targetRecord?.dailyLimit ?? dailyLimit
     );
   }, [targetBreakdown, targetRecord, dailyLimit]);
@@ -104,25 +120,29 @@ export default function Reports() {
   // 3. Reserve Wallet Trajectory
   const reserveTrendData = useMemo(() => {
     return analyticsService.prepareReserveTrend(
-      targetBreakdown,
+      targetBreakdown || [],
       targetRecord?.startingReserve ?? 0
     );
   }, [targetBreakdown, targetRecord]);
 
   // 4. Month-Over-Month Comparison
   const comparisonData = useMemo(() => {
-    const recA = storageService.getMonthRecord(compareMonthA);
-    const recB = storageService.getMonthRecord(compareMonthB);
+    const recA = (compareMonthA === activeMonth && activeRecord)
+      ? activeRecord
+      : storageService.getMonthRecord(compareMonthA);
+    const recB = (compareMonthB === activeMonth && activeRecord)
+      ? activeRecord
+      : storageService.getMonthRecord(compareMonthB);
     return analyticsService.compareTwoMonths(recA, recB);
-  }, [compareMonthA, compareMonthB]);
+  }, [compareMonthA, compareMonthB, activeMonth, activeRecord]);
 
   // 5. Streaks & Celebrations
   const todayBreakdown = useMemo(() => {
-    return perDayBreakdown.find((d) => d.date === todayString) || {};
+    return (perDayBreakdown || []).find((d) => d.date === todayString) || {};
   }, [perDayBreakdown, todayString]);
 
   const streak = useMemo(() => {
-    return analyticsService.calculateSpendingStreak(perDayBreakdown, todayString);
+    return analyticsService.calculateSpendingStreak(perDayBreakdown || [], todayString);
   }, [perDayBreakdown, todayString]);
 
   const celebration = useMemo(() => {
@@ -206,6 +226,55 @@ export default function Reports() {
           </button>
         </div>
       </div>
+
+      {/* SETUP REMINDER BANNER IF BUDGET NOT CONFIGURED */}
+      {!isConfigured && (
+        <div
+          className="card"
+          style={{
+            background: '#fef3c7',
+            border: '1px solid #fde68a',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={20} color="#b45309" />
+            <div>
+              <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.95rem' }}>
+                Budget Not Configured Yet
+              </div>
+              <div style={{ fontSize: '0.84rem', color: '#b45309', marginTop: '2px' }}>
+                Set your monthly pocket money and savings goal to activate daily limits and projections.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={loadFourDayExample}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '6px 12px', background: '#ffffff' }}
+            >
+              Load Sample Activity
+            </button>
+            <Link
+              to="/setup"
+              className="btn btn-primary"
+              style={{ fontSize: '0.82rem', padding: '6px 14px', textDecoration: 'none' }}
+            >
+              <SlidersHorizontal size={14} />
+              <span>Configure Budget</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* PROACTIVE ALERTS SECTION */}
       {alerts.length > 0 && (

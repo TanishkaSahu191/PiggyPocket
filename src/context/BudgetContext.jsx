@@ -264,6 +264,7 @@ export function BudgetProvider({ children }) {
   const value = {
     activeMonth,
     setActiveMonth,
+    activeRecord,
     selectedMonth: activeMonth,
     setSelectedMonth: setActiveMonth,
     budgetConfig: {
