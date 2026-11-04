@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Lock, Eye, EyeOff, PiggyBank, ArrowRight, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { validateSignUpForm, checkPasswordStrength } from '../../utils/validation';
+import FallingCoins3D from '../../components/common/FallingCoins3D';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ export default function SignUp() {
 
   return (
     <div className="auth-container">
+      <FallingCoins3D />
       <div className="auth-card" style={{ maxWidth: '480px' }}>
         <div className="auth-header">
           <div className="auth-brand">

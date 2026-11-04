@@ -4,19 +4,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top left, #eef2ff, #f8fafc 60%);
+  background: radial-gradient(ellipse at 50% 20%, #0f172a 0%, #090d16 65%, #020617 100%);
   padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
 }
 
 .auth-card {
   width: 100%;
   max-width: 460px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-xl);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.55), 0 0 35px rgba(79, 70, 229, 0.12);
   padding: 36px 32px;
   position: relative;
+  z-index: 10;
   overflow: hidden;
 }
 

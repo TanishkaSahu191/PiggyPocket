@@ -11,6 +11,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import FallingCoins3D from '../../components/common/FallingCoins3D';
 
 export default function OtpVerification() {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ export default function OtpVerification() {
 
   return (
     <div className="auth-container">
+      <FallingCoins3D />
       <div className="auth-card">
         <div className="auth-header">
           <div className="brand-icon-box" style={{ margin: '0 auto 12px auto' }}>
