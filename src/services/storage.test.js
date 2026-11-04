@@ -237,6 +237,36 @@ describe('Storage Service Layer - Persistence & Month Rollover', () => {
   });
 
   describe('History Archive Integrity', () => {
+    it('removes expense from previous month when transaction date moves to another month', () => {
+      // Create October with an expense
+      const res = storageService.addOrUpdateExpense({
+        id: 'tx_cross_month_1',
+        amount: 150,
+        category: 'Food',
+        date: '2026-10-25',
+        note: 'October dinner',
+      });
+
+      let oct = storageService.getMonthRecord('2026-10');
+      expect(oct.transactions.some((t) => t.id === 'tx_cross_month_1')).toBe(true);
+
+      // Edit the same expense and move its date to November
+      storageService.addOrUpdateExpense({
+        id: 'tx_cross_month_1',
+        amount: 150,
+        category: 'Food',
+        date: '2026-11-03',
+        note: 'Actually was November',
+      });
+
+      oct = storageService.getMonthRecord('2026-10');
+      const nov = storageService.getMonthRecord('2026-11');
+
+      // Must be removed from October and exist in November
+      expect(oct.transactions.some((t) => t.id === 'tx_cross_month_1')).toBe(false);
+      expect(nov.transactions.some((t) => t.id === 'tx_cross_month_1')).toBe(true);
+    });
+
     it('preserves all months in chronological order without deletions', () => {
       ['2026-08', '2026-09', '2026-10', '2026-11'].forEach((m) => {
         storageService.saveMonthRecord({

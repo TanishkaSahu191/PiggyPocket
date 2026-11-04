@@ -290,6 +290,13 @@ describe('Financial Calculation Engine - Core Pure Functions', () => {
       expect(result.initialSpendingBudget).toBe(3000); // 4000 - 1000
     });
 
+    it('handles day 31 receivedDate for February without calendar overflow', () => {
+      // February 2026 has 28 days
+      const febDates = generateCycleDates(2026, 2, 31);
+      expect(febDates[0]).toBe('2026-02-28');
+      expect(febDates[febDates.length - 1]).toBe('2026-03-30');
+    });
+
     // Multiple transactions on the same day are summed
     it('groups and sums multiple transactions occurring on the same day', () => {
       const transactions = [

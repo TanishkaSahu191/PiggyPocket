@@ -196,6 +196,17 @@ export const storageService = {
       amount: Math.max(0, Number(expense.amount) || 0),
     };
 
+    // If an existing expense was moved across month boundaries, remove it from old month
+    if (expense.id) {
+      for (const mStr of Object.keys(store)) {
+        if (mStr !== monthStr && store[mStr]?.transactions?.some((t) => t.id === txId)) {
+          store[mStr].transactions = store[mStr].transactions.filter((t) => t.id !== txId);
+          this.saveMonthRecord(store[mStr]);
+          this.cascadeDownstreamReserve(mStr);
+        }
+      }
+    }
+
     const existingIdx = monthRecord.transactions.findIndex((t) => t.id === txId);
     if (existingIdx !== -1) {
       monthRecord.transactions[existingIdx] = expenseWithId;
@@ -225,10 +236,11 @@ export const storageService = {
    */
   deleteExpense(expenseId, knownMonthStr) {
     const store = getStore();
-    let targetMonth = knownMonthStr;
+    let targetMonth = null;
 
-    if (!targetMonth) {
-      // Find month containing this expense
+    if (knownMonthStr && store[knownMonthStr]?.transactions?.some((t) => t.id === expenseId)) {
+      targetMonth = knownMonthStr;
+    } else {
       for (const mStr of Object.keys(store)) {
         if (store[mStr].transactions?.some((t) => t.id === expenseId)) {
           targetMonth = mStr;
@@ -253,11 +265,11 @@ export const storageService = {
    * @param {string} startMonthStr
    */
   cascadeDownstreamReserve(startMonthStr) {
-    const store = getStore();
     let currentMonth = startMonthStr;
 
     // Follow the chain forward
     while (true) {
+      const store = getStore();
       const currentRec = store[currentMonth];
       if (!currentRec) break;
 
@@ -364,13 +376,18 @@ export const storageService = {
       });
 
       if (!res.ok) {
-        throw new Error('Backend sync returned non-OK status');
+        let errMessage = `Backend sync failed with HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errMessage = errData.error;
+        } catch {}
+        throw new Error(errMessage);
       }
 
       const data = await res.json();
       return { migrated: true, data };
     } catch (err) {
-      return { migrated: false, error: err.message };
+      return { migrated: false, error: err.message, message: err.message };
     }
   },
 

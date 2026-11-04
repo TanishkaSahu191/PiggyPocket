@@ -145,6 +145,11 @@ export default function Settings() {
           type: 'success',
           message: 'All local budget records and transactions migrated to PostgreSQL backend successfully.',
         });
+      } else if (result.error) {
+        setMigrationStatus({
+          type: 'danger',
+          message: `Backend sync failed: ${result.error}`,
+        });
       } else {
         setMigrationStatus({
           type: 'info',

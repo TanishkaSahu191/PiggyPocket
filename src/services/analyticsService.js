@@ -446,8 +446,17 @@ export const analyticsService = {
       recordsMap.set(activeRecord.month, activeRecord);
     }
 
-    // Sort chronologically (earliest month first)
-    const sortedRecords = Array.from(recordsMap.values()).sort((a, b) => (a.month < b.month ? -1 : 1));
+    // Sort chronologically (earliest month first) and filter out unconfigured empty shells
+    const sortedRecords = Array.from(recordsMap.values())
+      .filter((rec) => {
+        if (!rec || !rec.month) return false;
+        // Ignore unconfigured placeholder months with zero transactions
+        if (rec.isConfigured === false && (!rec.transactions || rec.transactions.length === 0)) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (a.month < b.month ? -1 : 1));
 
     let runningTotal = 0;
     let totalSavingsGoal = 0;

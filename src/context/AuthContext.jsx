@@ -83,6 +83,19 @@ export function AuthProvider({ children }) {
   }, [pendingOtpEmail]);
 
   /**
+   * Complete password reset with OTP and new password
+   */
+  const resetPassword = useCallback(async (otpCode, newPassword) => {
+    const emailToReset = pendingOtpEmail || authService.getPendingOtpInfo()?.email;
+    if (!emailToReset) {
+      throw new Error('No pending password reset session found.');
+    }
+    const res = await authService.resetPassword(emailToReset, otpCode, newPassword);
+    setPendingOtpEmail('');
+    return res;
+  }, [pendingOtpEmail]);
+
+  /**
    * Log out active user
    */
   const logout = useCallback(async () => {
@@ -99,6 +112,7 @@ export function AuthProvider({ children }) {
     login,
     signup,
     forgotPassword,
+    resetPassword,
     verifyOtp,
     resendOtp,
     logout

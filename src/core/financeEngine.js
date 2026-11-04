@@ -116,11 +116,16 @@ export function getDaysInMonth(year, month) {
  */
 export function generateCycleDates(year, month, receivedDate = 1) {
   const dates = [];
-  const startDay = Math.max(1, Math.min(31, Number(receivedDate) || 1));
+  const maxDaysThisMonth = getDaysInMonth(year, month);
+  const startDay = Math.max(1, Math.min(maxDaysThisMonth, Number(receivedDate) || 1));
   const startDate = new Date(year, month - 1, startDay);
 
   // Cycle lasts until the day before the next month's received date
-  const nextMonthStart = new Date(year, month, startDay);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const maxDaysNextMonth = getDaysInMonth(nextYear, nextMonth);
+  const nextStartDay = Math.max(1, Math.min(maxDaysNextMonth, Number(receivedDate) || 1));
+  const nextMonthStart = new Date(nextYear, nextMonth - 1, nextStartDay);
   const currentDate = new Date(startDate);
 
   while (currentDate < nextMonthStart) {

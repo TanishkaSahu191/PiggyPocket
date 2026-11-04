@@ -58,7 +58,7 @@ export function getCurrentMonthString() {
 export function BudgetProvider({ children }) {
   const currentCalendarMonth = getCurrentMonthString();
   const [activeMonth, setActiveMonth] = useState(currentCalendarMonth);
-  const [activeRecord, setActiveRecord] = useState(null);
+  const [activeRecord, setActiveRecord] = useState(() => storageService.getMonthRecord(currentCalendarMonth));
 
   // New month rollover dialog state
   const [rolloverDialog, setRolloverDialog] = useState({
@@ -165,9 +165,14 @@ export function BudgetProvider({ children }) {
   // Save budget configuration
   const updateBudgetConfig = useCallback((updates) => {
     if (!activeRecord) return;
+    const resolvedLimit = updates.dailyLimit !== undefined
+      ? updates.dailyLimit
+      : (updates.customDailyLimit !== undefined ? updates.customDailyLimit : activeRecord.dailyLimit);
+
     const updated = {
       ...activeRecord,
       ...updates,
+      dailyLimit: resolvedLimit,
       isConfigured: true,
     };
     const saved = storageService.saveMonthRecord(updated);
@@ -185,10 +190,8 @@ export function BudgetProvider({ children }) {
       createdAt: new Date().toISOString(),
     });
 
-    // Refresh active month if the expense was added to it
-    if (result.month === activeMonth) {
-      setActiveRecord(storageService.getMonthRecord(activeMonth));
-    }
+    // Always re-read active month record to capture any cascaded reserve updates
+    setActiveRecord(storageService.getMonthRecord(activeMonth));
     return result.expense;
   }, [activeMonth]);
 
@@ -198,14 +201,14 @@ export function BudgetProvider({ children }) {
       ...updates,
       id,
     });
-    if (result.month === activeMonth) {
-      setActiveRecord(storageService.getMonthRecord(activeMonth));
-    }
+    // Always re-read active month record to capture any cascaded reserve updates
+    setActiveRecord(storageService.getMonthRecord(activeMonth));
+    return result.expense;
   }, [activeMonth]);
 
   // Delete an expense
   const deleteExpense = useCallback((id) => {
-    storageService.deleteExpense(id, activeMonth);
+    storageService.deleteExpense(id);
     setActiveRecord(storageService.getMonthRecord(activeMonth));
   }, [activeMonth]);
 

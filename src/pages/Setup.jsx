@@ -7,7 +7,8 @@ import {
   Info,
   Calendar,
   IndianRupee,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { useBudget } from '../context/BudgetContext';
 
@@ -33,6 +34,7 @@ export default function Setup() {
   });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   // Live preview computations based on current form inputs
   const previewPocketMoney = Math.max(0, Number(formState.pocketMoney) || 0);
@@ -52,6 +54,7 @@ export default function Setup() {
       [field]: value,
     }));
     setSavedSuccess(false);
+    setValidationError('');
   };
 
   const handleUseDefaultLimit = () => {
@@ -61,15 +64,26 @@ export default function Setup() {
       isCustomLimit: false,
     }));
     setSavedSuccess(false);
+    setValidationError('');
   };
 
   const handleSave = (e) => {
     e.preventDefault();
+    if (previewPocketMoney > 0 && previewSavingsGoal >= previewPocketMoney) {
+      setValidationError('Savings goal must be less than monthly pocket money to leave a valid spending budget.');
+      return;
+    }
+
+    const chosenDailyLimit = formState.isCustomLimit && formState.customDailyLimit !== null
+      ? Math.max(0, Number(formState.customDailyLimit) || 0)
+      : previewDefaultDailyLimit;
+
     updateBudgetConfig({
       pocketMoney: previewPocketMoney,
       dateReceived: Math.max(1, Math.min(31, Number(formState.dateReceived) || 1)),
       savingsGoal: previewSavingsGoal,
-      customDailyLimit: formState.isCustomLimit ? Number(formState.customDailyLimit) : previewDefaultDailyLimit,
+      dailyLimit: chosenDailyLimit,
+      customDailyLimit: chosenDailyLimit,
       isCustomLimit: formState.isCustomLimit,
     });
     setSavedSuccess(true);
@@ -93,6 +107,13 @@ export default function Setup() {
         <div className="alert-box alert-success">
           <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
           <span>Budget configuration saved successfully. Redirecting to Dashboard...</span>
+        </div>
+      )}
+
+      {validationError && (
+        <div className="alert-box alert-danger">
+          <AlertCircle size={18} style={{ flexShrink: 0 }} />
+          <span>{validationError}</span>
         </div>
       )}
 

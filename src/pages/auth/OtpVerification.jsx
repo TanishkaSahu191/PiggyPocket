@@ -1,14 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Info, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { authService } from '../../services/authService';
 import FallingCoins3D from '../../components/common/FallingCoins3D';
 
 export default function OtpVerification() {
   const navigate = useNavigate();
-  const { verifyOtp, resendOtp, pendingOtpEmail } = useAuth();
+  const { verifyOtp, resetPassword, resendOtp, pendingOtpEmail } = useAuth();
+
+  const pendingInfo = authService.getPendingOtpInfo();
+  const isResetPassword = pendingInfo?.purpose === 'reset_password';
+  const displayEmail = pendingOtpEmail || pendingInfo?.email || 'your email';
 
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetSuccessNotice, setResetSuccessNotice] = useState('');
   const [error, setError] = useState('');
   const [resendNotice, setResendNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +85,33 @@ export default function OtpVerification() {
       return;
     }
 
+    if (isResetPassword) {
+      if (!newPassword || newPassword.length < 8) {
+        setError('New password must be at least 8 characters long.');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError('Passwords do not match. Please ensure both fields match.');
+        return;
+      }
+
+      setIsSubmitting(true);
+      setError('');
+      setResendNotice('');
+      try {
+        await resetPassword(fullOtp, newPassword);
+        setResetSuccessNotice('Password reset successful. Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 1200);
+      } catch (err) {
+        setError(err.message || 'Failed to reset password. Please check the code and try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
     setResendNotice('');
@@ -124,16 +160,38 @@ export default function OtpVerification() {
         <div className="auth-header">
           <div className="stitched-leather-badge">
             <div className="stitch-inner">
-              <ShieldCheck size={20} className="leather-piggy-icon" />
-              <span className="leather-badge-text">Account Verification</span>
+              {isResetPassword ? (
+                <KeyRound size={20} className="leather-piggy-icon" />
+              ) : (
+                <ShieldCheck size={20} className="leather-piggy-icon" />
+              )}
+              <span className="leather-badge-text">
+                {isResetPassword ? 'Password Reset' : 'Account Verification'}
+              </span>
             </div>
           </div>
-          <h2 className="auth-title">Verify Your Account</h2>
+          <h2 className="auth-title">
+            {isResetPassword ? 'Reset Your Password' : 'Verify Your Account'}
+          </h2>
           <p className="auth-subtitle">
-            Enter the 6-digit code sent to{' '}
-            <strong style={{ color: '#4a3b2c' }}>{pendingOtpEmail || 'your email'}</strong>
+            {isResetPassword
+              ? `Enter the 6-digit code sent to ${displayEmail} and choose your new password`
+              : (
+                <>
+                  Enter the 6-digit code sent to{' '}
+                  <strong style={{ color: '#4a3b2c' }}>{displayEmail}</strong>
+                </>
+              )}
           </p>
         </div>
+
+        {/* Password reset success notice */}
+        {resetSuccessNotice && (
+          <div className="alert-box alert-success" style={{ marginBottom: '16px' }}>
+            <CheckCircle2 size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{resetSuccessNotice}</span>
+          </div>
+        )}
 
         {/* Resend success notice */}
         {resendNotice && (
@@ -171,13 +229,73 @@ export default function OtpVerification() {
             ))}
           </div>
 
+          {/* New Password & Confirm Password for Password Reset */}
+          {isResetPassword && (
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group" style={{ textAlign: 'left' }}>
+                <label className="form-label" htmlFor="newPassword" style={{ color: '#4a3b2c', fontWeight: 600 }}>
+                  New Password (min 8 chars)
+                </label>
+                <div className="input-wrapper">
+                  <Lock size={18} className="input-icon" color="#8c5725" />
+                  <input
+                    id="newPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setError('');
+                    }}
+                    className="input-field"
+                    placeholder="Enter new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex="-1"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ textAlign: 'left' }}>
+                <label className="form-label" htmlFor="confirmPassword" style={{ color: '#4a3b2c', fontWeight: 600 }}>
+                  Confirm New Password
+                </label>
+                <div className="input-wrapper">
+                  <Lock size={18} className="input-icon" color="#8c5725" />
+                  <input
+                    id="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setError('');
+                    }}
+                    className="input-field"
+                    placeholder="Re-enter new password"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pillow Button */}
           <button
             type="submit"
             className="pillow-button"
             disabled={isSubmitting}
+            style={{ marginTop: isResetPassword ? '16px' : undefined }}
           >
-            <span>{isSubmitting ? 'Verifying...' : 'Verify & Continue'}</span>
+            <span>
+              {isSubmitting
+                ? 'Processing...'
+                : (isResetPassword ? 'Set New Password' : 'Verify & Continue')}
+            </span>
             {!isSubmitting && <ArrowRight size={19} className="pillow-button-arrow" />}
           </button>
         </form>
