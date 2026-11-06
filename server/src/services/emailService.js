@@ -104,7 +104,7 @@ export const emailService = {
           },
           body: JSON.stringify({
             from: fromAddress,
-            to: cleanTo,
+            to: [cleanTo],
             subject,
             html,
             text: text || subject,
@@ -145,3 +145,4 @@ export const emailService = {
     };
   },
 };
+
