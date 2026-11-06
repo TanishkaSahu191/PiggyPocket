@@ -26,7 +26,7 @@ export const authController = {
       // Check for existing user
       const existingUser = await query(
         `SELECT id FROM users WHERE email = $1`,
-        [email.toLowerCase()]
+        [email.toLowerCase().trim()]
       );
 
       if (existingUser.rows.length > 0) {

@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import { query } from '../config/db.js';
 import { budgetService } from './budgetService.js';
 import { renderDailySummaryHtml } from '../templates/dailySummaryEmail.js';
+import { emailService } from './emailService.js';
 
 export const schedulerService = {
   cronTask: null,
@@ -260,40 +261,14 @@ export const schedulerService = {
   },
 
   /**
-   * Email transport dispatcher: Resend API with console fallback.
+   * Email transport dispatcher: SMTP or Resend API via unified emailService.
    */
   async dispatchEmail({ to, subject, html }) {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-
-    if (resendApiKey && resendApiKey.trim() !== '') {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromAddress,
-          to,
-          subject,
-          html,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Resend API rejected dispatch');
-      }
-      return;
-    }
-
-    // Development Console Fallback
-    console.log('====================================================');
-    console.log(`[DISPATCHED DAILY SUMMARY EMAIL] to: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Timestamp: ${new Date().toISOString()}`);
-    console.log('====================================================');
+    await emailService.sendMail({
+      to,
+      subject,
+      html,
+    });
   },
 
   /**

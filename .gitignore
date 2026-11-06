@@ -15,7 +15,10 @@ dist-ssr
 .env
 server/.env
 
-# Editor directories and files
+# Database data
+server/data/
+server/data/*
+
 .vscode/*
 !.vscode/extensions.json
 .idea

@@ -65,13 +65,15 @@ export const authService = {
       return response.data.user;
     }
 
-    // If backend is offline, proxy error, or 5xx server error, fall back to offline authentication
-    if (response.networkError || response.isServerError || response.status === 0) {
-      return this._offlineLogin(cleanEmail, password);
+    if (response.networkError || response.status === 0) {
+      throw new Error('Unable to connect to PiggyPocket server. Please verify the backend server is running on port 5000.');
     }
 
-    // Backend is reachable and returned a 4xx client error (e.g. 401 invalid credentials)
-    throw new Error(response.data.error || 'Invalid email or password.');
+    if (response.isServerError) {
+      throw new Error(response.data?.error || 'Server error during login. Please try again.');
+    }
+
+    throw new Error(response.data?.error || 'Invalid email or password.');
   },
 
   /**
@@ -99,11 +101,15 @@ export const authService = {
       return { email: cleanEmail, message: response.data.message };
     }
 
-    if (response.networkError || response.isServerError || response.status === 0) {
-      return this._offlineSignUp(userData);
+    if (response.networkError || response.status === 0) {
+      throw new Error('Unable to connect to PiggyPocket server. Please verify the backend is running.');
     }
 
-    throw new Error(response.data.error || 'Registration failed.');
+    if (response.isServerError) {
+      throw new Error(response.data?.error || 'Server error during registration. Please try again.');
+    }
+
+    throw new Error(response.data?.error || 'Registration failed.');
   },
 
   /**
@@ -129,11 +135,15 @@ export const authService = {
       return response.data.user || { email: cleanEmail };
     }
 
-    if (response.networkError || response.isServerError || response.status === 0) {
-      return this._offlineVerify(cleanEmail, code);
+    if (response.networkError || response.status === 0) {
+      throw new Error('Unable to connect to PiggyPocket server to verify code.');
     }
 
-    throw new Error(response.data.error || 'Verification failed.');
+    if (response.isServerError) {
+      throw new Error(response.data?.error || 'Server error during OTP verification.');
+    }
+
+    throw new Error(response.data?.error || 'Verification failed.');
   },
 
   /**
@@ -200,8 +210,12 @@ export const authService = {
       return response.data;
     }
 
-    if (response.networkError || response.isServerError || response.status === 0) {
-      return this._offlineResetPassword(cleanEmail, code, newPassword);
+    if (response.networkError || response.status === 0) {
+      throw new Error('Unable to connect to PiggyPocket server to complete password reset.');
+    }
+
+    if (response.isServerError) {
+      throw new Error(response.data?.error || 'Server error during password reset.');
     }
 
     throw new Error(response.data?.error || 'Password reset failed.');

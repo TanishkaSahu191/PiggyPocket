@@ -5,7 +5,14 @@
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_FILE = path.join(__dirname, '../../data/piggypocket_db.json');
 
 const { Pool } = pg;
 
@@ -26,15 +33,50 @@ const DEFAULT_DEMO_USER = {
   updated_at: new Date().toISOString(),
 };
 
-// In-memory relational tables for local development fallback
-const memoryDb = {
-  users: [{ ...DEFAULT_DEMO_USER }],
-  otp_verifications: [],
-  monthly_budgets: [],
-  transactions: [],
-  user_settings: [],
-  email_logs: [],
-};
+function loadPersistedStore() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          users: parsed.users || [{ ...DEFAULT_DEMO_USER }],
+          otp_verifications: parsed.otp_verifications || [],
+          monthly_budgets: parsed.monthly_budgets || [],
+          transactions: parsed.transactions || [],
+          user_settings: parsed.user_settings || [],
+          email_logs: parsed.email_logs || [],
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load persisted database file:', err.message);
+  }
+  return {
+    users: [{ ...DEFAULT_DEMO_USER }],
+    otp_verifications: [],
+    monthly_budgets: [],
+    transactions: [],
+    user_settings: [],
+    email_logs: [],
+  };
+}
+
+function savePersistedStore() {
+  if (process.env.NODE_ENV === 'test') return;
+  try {
+    const dir = path.dirname(DATA_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DATA_FILE, JSON.stringify(memoryDb, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('Failed to save persisted database file:', err.message);
+  }
+}
+
+// Persistent file-backed local relational store for development
+const memoryDb = loadPersistedStore();
 
 if (connectionString && connectionString.trim() !== '') {
   try {
@@ -73,7 +115,12 @@ export async function query(text, params = []) {
   }
 
   // Memory fallback query handler
-  return executeMemoryQuery(text, params);
+  const result = executeMemoryQuery(text, params);
+  const lower = text.trim().toLowerCase();
+  if (lower.startsWith('insert') || lower.startsWith('update') || lower.startsWith('delete')) {
+    savePersistedStore();
+  }
+  return result;
 }
 
 /**

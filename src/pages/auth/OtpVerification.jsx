@@ -132,21 +132,12 @@ export default function OtpVerification() {
     setResendNotice('');
     try {
       await resendOtp();
-      setResendNotice('A new 6-digit verification code has been dispatched.');
+      setResendNotice('A fresh 6-digit verification code has been dispatched to your email.');
       setResendTimer(30);
     } catch (err) {
       setError(err.message || 'Failed to resend code. Please try again.');
     } finally {
       setIsResending(false);
-    }
-  };
-
-  const fillDemoOtp = () => {
-    setOtpDigits(['1', '2', '3', '4', '5', '6']);
-    setError('');
-    setResendNotice('');
-    if (inputRefs.current[5]) {
-      inputRefs.current[5].focus();
     }
   };
 
@@ -300,23 +291,19 @@ export default function OtpVerification() {
           </button>
         </form>
 
-        {/* Torn Lined Notepad Paper for Notes & Testing */}
+        {/* Delivery Details & Security Notice */}
         <div className="torn-notes-paper" style={{ marginTop: '22px' }}>
           <div className="notes-paper-tear-top"></div>
           <div className="notes-paper-content">
             <div className="notes-paper-header">
-              <span className="notes-paper-title">Notes</span>
-              <button
-                type="button"
-                className="notes-fill-btn"
-                onClick={fillDemoOtp}
-              >
-                Auto-fill 123456
-              </button>
+              <span className="notes-paper-title">Delivery Details</span>
             </div>
             <div className="notes-paper-body">
               <div className="notes-line">
-                <span className="notes-tag">Verification:</span> Check your inbox or use code <strong>123456</strong>
+                <span className="notes-tag">Inbox:</span> Sent to <strong>{displayEmail}</strong> (expires in 10 minutes)
+              </div>
+              <div className="notes-line">
+                <span className="notes-tag">Spam:</span> If not visible within 60 seconds, check your spam or promotions folder
               </div>
               <div className="notes-line" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="notes-tag">Resend:</span>

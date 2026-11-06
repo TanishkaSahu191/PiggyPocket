@@ -51,16 +51,6 @@ export default function Login() {
     }
   };
 
-  // Helper to fill demo account for quick testing
-  const handleQuickFillDemo = () => {
-    setFormData({
-      email: 'tanishkasahu191@gmail.com',
-      password: 'Password123!',
-    });
-    setErrors({});
-    setServerError('');
-  };
-
   return (
     <div className="auth-container">
       {/* 3D Money Falling Background */}
@@ -164,26 +154,19 @@ export default function Login() {
           </div>
         </form>
 
-        {/* Torn Lined Notepad Paper ("Notes" Style Inspiration) */}
+        {/* Student Security & Session Note */}
         <div className="torn-notes-paper">
           <div className="notes-paper-tear-top"></div>
           <div className="notes-paper-content">
             <div className="notes-paper-header">
-              <span className="notes-paper-title">Notes</span>
-              <button
-                type="button"
-                className="notes-fill-btn"
-                onClick={handleQuickFillDemo}
-              >
-                Fill Info
-              </button>
+              <span className="notes-paper-title">Student Access</span>
             </div>
             <div className="notes-paper-body">
               <div className="notes-line">
-                <span className="notes-tag">Demo:</span> tanishkasahu191@gmail.com
+                <span className="notes-tag">Account:</span> Sign in with your registered college or personal email
               </div>
               <div className="notes-line">
-                <span className="notes-tag">Pass:</span> Password123!
+                <span className="notes-tag">Security:</span> Password hashes and sessions are protected with industry-standard bcrypt
               </div>
             </div>
           </div>

@@ -10,6 +10,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
+import { emailService } from './emailService.js';
 
 export const otpService = {
   /**
@@ -57,49 +58,49 @@ export const otpService = {
   },
 
   /**
-   * Sends OTP via Resend API or console fallback.
+   * Sends OTP via production email transport (SMTP / Resend).
    */
   async sendEmailOtp(email, otp, purpose) {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    const purposeLabel = purpose === 'reset_password' ? 'Password Reset' : 'Account Verification';
 
-    if (resendApiKey) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: email,
-            subject: `PiggyPocket Verification Code: ${otp}`,
-            text: `Your PiggyPocket verification code for ${purpose} is: ${otp}. It will expire in 10 minutes.`,
-            html: `
-              <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #4f46e5; margin-bottom: 8px;">PiggyPocket Verification</h2>
-                <p style="color: #475569; font-size: 14px;">Use the verification code below to complete your ${purpose}:</p>
-                <div style="font-size: 28px; font-weight: 800; letter-spacing: 4px; color: #0f172a; padding: 14px; background: #f8fafc; text-align: center; border-radius: 6px; margin: 16px 0;">
-                  ${otp}
-                </div>
-                <p style="color: #94a3b8; font-size: 12px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
-              </div>
-            `,
-          }),
-        });
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #4f46e5; margin: 0 0 6px 0; font-size: 22px; font-weight: 800;">PiggyPocket</h2>
+          <span style="font-size: 13px; color: #64748b; font-weight: 500;">Student Financial Discipline</span>
+        </div>
+        <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #4f46e5;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #1e293b;">${purposeLabel}</h3>
+          <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.5;">
+            Use the 6-digit verification code below to complete your ${purposeLabel.toLowerCase()}:
+          </p>
+        </div>
+        <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1e1b4b; padding: 18px; background: #ede9fe; text-align: center; border-radius: 8px; margin: 20px 0; border: 1.5px dashed #6366f1;">
+          ${otp}
+        </div>
+        <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin: 0 0 16px 0;">
+          This code is strictly confidential and will expire in 10 minutes. If you did not initiate this request, please disregard this email.
+        </p>
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; font-size: 11px; color: #94a3b8; text-align: center;">
+          PiggyPocket Automated Security Notification
+        </div>
+      </div>
+    `;
 
-        if (!response.ok) {
-          const errData = await response.json();
-          console.warn('Resend API error:', errData);
-          this.logDevFallback('EMAIL', email, otp);
-        }
-      } catch (err) {
-        console.warn('Resend dispatch failed:', err.message);
+    try {
+      const res = await emailService.sendMail({
+        to: email,
+        subject: `PiggyPocket Verification Code: ${otp}`,
+        html,
+        text: `Your PiggyPocket verification code for ${purposeLabel} is: ${otp}. It will expire in 10 minutes.`,
+      });
+
+      if (res.transport === 'dev_console') {
         this.logDevFallback('EMAIL', email, otp);
       }
-    } else {
+    } catch (err) {
       this.logDevFallback('EMAIL', email, otp);
+      throw err;
     }
   },
 
@@ -160,7 +161,7 @@ export const otpService = {
    * @returns {Promise<boolean>}
    */
   async verifyOtp({ identifier, code, purpose }) {
-    const isDev = process.env.NODE_ENV !== 'production' || !process.env.RESEND_API_KEY;
+    const isTest = process.env.NODE_ENV === 'test';
 
     const res = await query(
       `SELECT * FROM otp_verifications
@@ -169,8 +170,8 @@ export const otpService = {
       [identifier.toLowerCase(), purpose]
     );
 
-    // In local development or testing mode, accept 123456 as master bypass
-    if (isDev && code === '123456') {
+    // In automated testing suite ONLY, permit test harness bypass
+    if (isTest && code === '123456') {
       if (res.rows.length > 0) {
         await query(
           `UPDATE otp_verifications SET verified_at = NOW() WHERE id = $1`,
