@@ -159,6 +159,7 @@ function executeMemoryQuery(text, params = []) {
       updated_at: new Date().toISOString(),
     };
     memoryDb.users.push(newUser);
+    savePersistedStore();
     return { rows: [newUser], rowCount: 1 };
   }
 
@@ -170,6 +171,7 @@ function executeMemoryQuery(text, params = []) {
       const idx = memoryDb.users.findIndex((u) => u.email.toLowerCase() === email);
       if (idx !== -1) {
         memoryDb.users[idx].password_hash = newHash;
+        savePersistedStore();
         return { rows: [memoryDb.users[idx]], rowCount: 1 };
       }
     }
@@ -178,6 +180,7 @@ function executeMemoryQuery(text, params = []) {
       const idx = memoryDb.users.findIndex((u) => u.id === id);
       if (idx !== -1) {
         memoryDb.users[idx].is_email_verified = true;
+        savePersistedStore();
         return { rows: [memoryDb.users[idx]], rowCount: 1 };
       }
     }
@@ -197,6 +200,7 @@ function executeMemoryQuery(text, params = []) {
       created_at: new Date().toISOString(),
     };
     memoryDb.otp_verifications.push(rec);
+    savePersistedStore();
     return { rows: [rec], rowCount: 1 };
   }
 
@@ -214,6 +218,7 @@ function executeMemoryQuery(text, params = []) {
     const idx = memoryDb.otp_verifications.findIndex((o) => o.id === id);
     if (idx !== -1) {
       memoryDb.otp_verifications[idx].verified_at = new Date().toISOString();
+      savePersistedStore();
       return { rows: [memoryDb.otp_verifications[idx]], rowCount: 1 };
     }
   }
@@ -256,6 +261,7 @@ function executeMemoryQuery(text, params = []) {
     } else {
       memoryDb.monthly_budgets.push(rec);
     }
+    savePersistedStore();
     return { rows: [rec], rowCount: 1 };
   }
 
@@ -289,6 +295,7 @@ function executeMemoryQuery(text, params = []) {
     } else {
       memoryDb.transactions.push(rec);
     }
+    savePersistedStore();
     return { rows: [rec], rowCount: 1 };
   }
 
@@ -297,6 +304,7 @@ function executeMemoryQuery(text, params = []) {
     const userId = params[1];
     const before = memoryDb.transactions.length;
     memoryDb.transactions = memoryDb.transactions.filter((t) => !(t.id === id && t.user_id === userId));
+    savePersistedStore();
     return { rows: [], rowCount: before - memoryDb.transactions.length };
   }
 

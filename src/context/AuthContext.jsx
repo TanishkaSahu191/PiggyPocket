@@ -96,6 +96,16 @@ export function AuthProvider({ children }) {
   }, [pendingOtpEmail]);
 
   /**
+   * Log in user with Google authentication
+   */
+  const loginWithGoogle = useCallback(async (googlePayload) => {
+    const session = await authService.loginWithGoogle(googlePayload);
+    setUser(session);
+    setPendingOtpEmail('');
+    return session;
+  }, []);
+
+  /**
    * Log out active user
    */
   const logout = useCallback(async () => {
@@ -111,6 +121,7 @@ export function AuthProvider({ children }) {
     setPendingOtpEmail,
     login,
     signup,
+    loginWithGoogle,
     forgotPassword,
     resetPassword,
     verifyOtp,

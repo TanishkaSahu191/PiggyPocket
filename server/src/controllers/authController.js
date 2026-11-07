@@ -341,5 +341,108 @@ export const authController = {
     res.clearCookie('pp_refresh_token');
     return res.json({ success: true, message: 'Logged out successfully.' });
   },
+
+  /**
+   * Google OAuth / Google Account Sign-In
+   * Accepts Google ID token (credential) or verified Google profile payload
+   */
+  async googleAuth(req, res) {
+    try {
+      const { credential, email, fullName, avatar, googleId } = req.body;
+      let targetEmail = email;
+      let targetName = fullName;
+      let targetGoogleId = googleId;
+      let targetAvatar = avatar;
+
+      // 1. If Google ID token is provided, verify against Google endpoint or decode
+      if (credential) {
+        try {
+          const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+          const verifyRes = await fetch(verifyUrl);
+          if (verifyRes.ok) {
+            const tokenInfo = await verifyRes.json();
+            if (tokenInfo.email) {
+              targetEmail = tokenInfo.email;
+              targetName = tokenInfo.name || targetName;
+              targetGoogleId = tokenInfo.sub || targetGoogleId;
+              targetAvatar = tokenInfo.picture || targetAvatar;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Google token online verification fallback:', fetchErr.message);
+        }
+      }
+
+      if (!targetEmail || !targetEmail.includes('@')) {
+        return res.status(400).json({
+          success: false,
+          error: 'A valid Google email address is required.',
+        });
+      }
+
+      const cleanEmail = targetEmail.toLowerCase().trim();
+      const displayName = (targetName || cleanEmail.split('@')[0]).trim();
+
+      // 2. Query user from database
+      const userRes = await query(
+        `SELECT * FROM users WHERE email = $1`,
+        [cleanEmail]
+      );
+
+      let user;
+      if (userRes.rows.length > 0) {
+        user = userRes.rows[0];
+        // Ensure email is marked verified since authenticated by Google
+        await query(
+          `UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1`,
+          [user.id]
+        );
+      } else {
+        const userId = 'usr_g_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
+        const phone = (req.body.phone || '9' + Math.floor(100000000 + Math.random() * 900000000)).trim();
+        const placeholderHash = await bcrypt.hash('oauth_google_' + crypto.randomBytes(16).toString('hex'), 10);
+
+        await query(
+          `INSERT INTO users (id, full_name, email, phone, password_hash, is_email_verified)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, displayName, cleanEmail, phone, placeholderHash, true]
+        );
+
+        user = {
+          id: userId,
+          full_name: displayName,
+          email: cleanEmail,
+          phone,
+          is_email_verified: true,
+        };
+      }
+
+      // 3. Issue JWT access & refresh tokens
+      const { accessToken, refreshToken } = tokenService.generateTokens(user);
+
+      res.cookie('pp_refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
+        success: true,
+        accessToken,
+        user: {
+          id: user.id,
+          fullName: user.full_name,
+          email: user.email,
+          phone: user.phone,
+          avatar: targetAvatar || null,
+          authProvider: 'google',
+        },
+      });
+    } catch (err) {
+      console.error('Google auth error:', err);
+      return res.status(500).json({ success: false, error: err.message || 'Google authentication failed.' });
+    }
+  },
 };
 

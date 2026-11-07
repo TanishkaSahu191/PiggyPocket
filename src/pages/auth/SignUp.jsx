@@ -4,6 +4,7 @@ import { User, Mail, Phone, Lock, Eye, EyeOff, PiggyBank, ArrowRight, AlertCircl
 import { useAuth } from '../../hooks/useAuth';
 import { validateSignUpForm, checkPasswordStrength } from '../../utils/validation';
 import FallingCoins3D from '../../components/common/FallingCoins3D';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -77,6 +78,17 @@ export default function SignUp() {
             <span>{serverError}</span>
           </div>
         )}
+
+        <GoogleSignInButton
+          onError={(msg) => setServerError(msg)}
+          redirectTo="/dashboard"
+        />
+
+        <div className="auth-divider">
+          <div className="auth-divider-line"></div>
+          <span className="auth-divider-text">or register with email</span>
+          <div className="auth-divider-line"></div>
+        </div>
 
         <form onSubmit={handleSubmit} noValidate>
           {/* Full Name */}

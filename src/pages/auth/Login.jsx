@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, PiggyBank, ArrowRight, AlertCircle } from 'luc
 import { useAuth } from '../../hooks/useAuth';
 import { validateLoginForm } from '../../utils/validation';
 import FallingCoins3D from '../../components/common/FallingCoins3D';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -75,6 +76,17 @@ export default function Login() {
             <span>{serverError}</span>
           </div>
         )}
+
+        <GoogleSignInButton
+          onError={(msg) => setServerError(msg)}
+          redirectTo={fromLocation}
+        />
+
+        <div className="auth-divider">
+          <div className="auth-divider-line"></div>
+          <span className="auth-divider-text">or sign in with password</span>
+          <div className="auth-divider-line"></div>
+        </div>
 
         <form onSubmit={handleSubmit} noValidate>
           {/* Email: Recessed Groove Slot Inspiration */}

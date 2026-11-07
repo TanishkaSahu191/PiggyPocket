@@ -48,6 +48,42 @@ async function safeFetchJson(url, options = {}) {
 
 export const authService = {
   /**
+   * Logs in a user via Google Sign-In with backend token exchange
+   */
+  async loginWithGoogle({ credential, email, fullName, avatar, googleId } = {}) {
+    const cleanEmail = email ? email.toLowerCase().trim() : undefined;
+
+    const response = await safeFetchJson('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        credential,
+        email: cleanEmail,
+        fullName,
+        avatar,
+        googleId,
+      }),
+    });
+
+    if (response.ok && response.data.accessToken) {
+      localStorage.setItem(STORAGE_ACCESS_TOKEN, response.data.accessToken);
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(response.data.user));
+      localStorage.removeItem(STORAGE_PENDING_OTP_KEY);
+      return response.data.user;
+    }
+
+    if (response.networkError || response.status === 0) {
+      throw new Error('Unable to connect to PiggyPocket server. Please verify the backend server is running on port 5000.');
+    }
+
+    if (response.isServerError) {
+      throw new Error(response.data?.error || 'Server error during Google authentication. Please try again.');
+    }
+
+    throw new Error(response.data?.error || 'Google authentication failed.');
+  },
+
+  /**
    * Logs in a user via Backend API or offline fallback
    */
   async login(email, password) {

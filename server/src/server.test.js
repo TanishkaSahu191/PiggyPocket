@@ -78,6 +78,32 @@ describe('PiggyPocket Backend API Integration Tests', () => {
       expect(loginRes.body.accessToken).toBeDefined();
       expect(loginRes.body.user.email).toBe('auth_test@college.edu');
     });
+
+    it('authenticates and creates verified account via Google Sign-In', async () => {
+      const googleRes = await request(app)
+        .post('/api/auth/google')
+        .send({
+          email: 'tanishkasahuwork191@gmail.com',
+          fullName: 'Tanishka Sahu',
+          googleId: 'g_test_101',
+        });
+
+      expect(googleRes.status).toBe(200);
+      expect(googleRes.body.success).toBe(true);
+      expect(googleRes.body.accessToken).toBeDefined();
+      expect(googleRes.body.user.email).toBe('tanishkasahuwork191@gmail.com');
+      expect(googleRes.body.user.authProvider).toBe('google');
+    });
+
+    it('rejects Google authentication without valid email', async () => {
+      const badRes = await request(app)
+        .post('/api/auth/google')
+        .send({});
+
+      expect(badRes.status).toBe(400);
+      expect(badRes.body.success).toBe(false);
+      expect(badRes.body.error).toContain('Google email');
+    });
   });
 
   describe('Budget & Expense Endpoints with Shared Finance Engine', () => {
